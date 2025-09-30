@@ -189,7 +189,9 @@ function wpcl_courses_shortcode($atts) {
 	 $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
 	 $img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
 	 echo '<tr>';
-	 echo '<td>' . get_the_title() . '</td>';
+	 echo '<td><a href="' . esc_url($permalink) . '">';
+	 echo get_the_title();
+	 echo '</td>';
 	 echo '<td>' . get_the_excerpt() . '</td>';
 	 echo '<td>' . esc_html($price) . '</td>';
 	 echo '</tr>';
@@ -215,10 +217,10 @@ function wpcl_courses_shortcode($atts) {
 		echo '</div>';
 	 } else { // bullet
 	 echo '<ul class="wpcl-courses-bullet">';
-	 while ($query->have_posts()) : $query->the_post();
-	 $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-	 echo '<li><strong>' . get_the_title() . '</strong> (' . esc_html($price) . ')<br />' . get_the_excerpt() . '</li>';
-	 endwhile;
+	 	while ($query->have_posts()) : $query->the_post();
+	 		$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+	 		echo '<li><strong>' . get_the_title() . '</strong> (' . esc_html($price) . ')<br />' . get_the_excerpt() . '</li>';
+	 	endwhile;
 	 echo '</ul>';
 	}
 	wp_reset_postdata();
