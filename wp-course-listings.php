@@ -94,7 +94,6 @@ add_action('init', 'wpcl_register_course_category');
 function wpcl_add_course_meta_boxes() {
 	add_meta_box('wpcl_course_price', 'Course Price', 'wpcl_course_price_callback', 'course', 'side');
 	add_meta_box('wpcl_course_post_image', 'Post Image URL', 'wpcl_course_post_image_callback', 'course', 'normal');
-	add_meta_box('wpcl_course_thumbnail_image', 'Thumbnail Image URL', 'wpcl_course_thumbnail_image_callback', 'course', 'normal');
 	add_meta_box('wpcl_course_post_url', 'Course Post URL', 'wpcl_course_post_url_callback', 'course', 'normal');
 }
 // Meta box callback for Course Post URL
@@ -110,14 +109,50 @@ function wpcl_course_price_callback($post) {
 }
 
 function wpcl_course_post_image_callback($post) {
-	$value = get_post_meta($post->ID, '_wpcl_course_post_image', true);
-	echo '<input type="text" name="wpcl_course_post_image" value="' . esc_attr($value) . '" style="width:100%;" placeholder="https://..." />';
+		$value = get_post_meta($post->ID, '_wpcl_course_post_image', true);
+		$image_preview = $value ? '<img src="' . esc_url($value) . '" style="max-width:100%;height:auto;display:block;margin-bottom:10px;" />' : '';
+		echo '<div id="wpcl-course-post-image-wrapper">' . $image_preview . '</div>';
+		echo '<input type="hidden" id="wpcl_course_post_image" name="wpcl_course_post_image" value="' . esc_attr($value) . '" />';
+		echo '<button type="button" class="button" id="wpcl_select_post_image">Select Image</button> ';
+		echo '<button type="button" class="button" id="wpcl_remove_post_image">Remove Image</button>';
+		?>
+		<script>
+		(function($){
+			$(function(){
+				var frame;
+				$('#wpcl_select_post_image').on('click', function(e){
+					e.preventDefault();
+					if (frame) { frame.open(); return; }
+					frame = wp.media({
+						title: 'Select or Upload Image',
+						button: { text: 'Use this image' },
+						multiple: false
+					});
+					frame.on('select', function(){
+						var attachment = frame.state().get('selection').first().toJSON();
+						$('#wpcl_course_post_image').val(attachment.url);
+						$('#wpcl-course-post-image-wrapper').html('<img src="'+attachment.url+'" style="max-width:100%;height:auto;display:block;margin-bottom:10px;" />');
+					});
+					frame.open();
+				});
+				$('#wpcl_remove_post_image').on('click', function(e){
+					e.preventDefault();
+					$('#wpcl_course_post_image').val('');
+					$('#wpcl-course-post-image-wrapper').html('');
+				});
+			});
+		})(jQuery);
+		</script>
+		<?php
+// Enqueue media uploader for admin
+function wpcl_enqueue_admin_media($hook) {
+	if ('post.php' === $hook || 'post-new.php' === $hook) {
+		wp_enqueue_media();
+	}
+}
+add_action('admin_enqueue_scripts', 'wpcl_enqueue_admin_media');
 }
 
-function wpcl_course_thumbnail_image_callback($post) {
-	$value = get_post_meta($post->ID, '_wpcl_course_thumbnail_image', true);
-	echo '<input type="text" name="wpcl_course_thumbnail_image" value="' . esc_attr($value) . '" style="width:100%;" placeholder="https://..." />';
-}
 
 // Save Meta Box Data
 function wpcl_save_course_meta($post_id) {
@@ -126,9 +161,6 @@ function wpcl_save_course_meta($post_id) {
 	}
 	if (array_key_exists('wpcl_course_post_image', $_POST)) {
 		update_post_meta($post_id, '_wpcl_course_post_image', esc_url_raw($_POST['wpcl_course_post_image']));
-	}
-	if (array_key_exists('wpcl_course_thumbnail_image', $_POST)) {
-		update_post_meta($post_id, '_wpcl_course_thumbnail_image', esc_url_raw($_POST['wpcl_course_thumbnail_image']));
 	}
 	if (array_key_exists('wpcl_course_post_url', $_POST)) {
 		update_post_meta($post_id, '_wpcl_course_post_url', esc_url_raw($_POST['wpcl_course_post_url']));
