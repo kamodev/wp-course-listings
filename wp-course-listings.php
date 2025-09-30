@@ -94,12 +94,6 @@ add_action('init', 'wpcl_register_course_category');
 function wpcl_add_course_meta_boxes() {
 	add_meta_box('wpcl_course_price', 'Course Price', 'wpcl_course_price_callback', 'course', 'side');
 	add_meta_box('wpcl_course_post_image', 'Post Image URL', 'wpcl_course_post_image_callback', 'course', 'normal');
-	add_meta_box('wpcl_course_post_url', 'Course Post URL', 'wpcl_course_post_url_callback', 'course', 'normal');
-}
-// Meta box callback for Course Post URL
-function wpcl_course_post_url_callback($post) {
-	$value = get_post_meta($post->ID, '_wpcl_course_post_url', true);
-	echo '<input type="url" name="wpcl_course_post_url" value="' . esc_attr($value) . '" style="width:100%;" placeholder="https://..." />';
 }
 add_action('add_meta_boxes', 'wpcl_add_course_meta_boxes');
 
@@ -162,9 +156,6 @@ function wpcl_save_course_meta($post_id) {
 	if (array_key_exists('wpcl_course_post_image', $_POST)) {
 		update_post_meta($post_id, '_wpcl_course_post_image', esc_url_raw($_POST['wpcl_course_post_image']));
 	}
-	if (array_key_exists('wpcl_course_post_url', $_POST)) {
-		update_post_meta($post_id, '_wpcl_course_post_url', esc_url_raw($_POST['wpcl_course_post_url']));
-	}
 }
 add_action('save_post', 'wpcl_save_course_meta');
 
@@ -192,22 +183,19 @@ function wpcl_courses_shortcode($atts) {
 	if (!$query->have_posts()) return '<p>No courses found.</p>';
 
 	ob_start();
-	if ($atts['layout'] === 'table') {
-		echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th><th>Price</th><th>Image</th><th>Post URL</th></tr></thead><tbody>';
-		while ($query->have_posts()) : $query->the_post();
-			$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-			$img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
-			$url = get_post_meta(get_the_ID(), '_wpcl_course_post_url', true);
-			echo '<tr>';
-			echo '<td>' . get_the_title() . '</td>';
-			echo '<td>' . get_the_excerpt() . '</td>';
-			echo '<td>' . esc_html($price) . '</td>';
-			echo '<td>' . ($img ? '<img src="' . esc_url($img) . '" style="max-width:100px;" />' : '') . '</td>';
-			echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank">View</a>' : '') . '</td>';
-			echo '</tr>';
-		endwhile;
-		echo '</tbody></table>';
-	} elseif ($atts['layout'] === 'thumbnail') {
+	 if ($atts['layout'] === 'table') {
+	 echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th><th>Price</th></tr></thead><tbody>';
+	 while ($query->have_posts()) : $query->the_post();
+	 $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+	 $img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
+	 echo '<tr>';
+	 echo '<td>' . get_the_title() . '</td>';
+	 echo '<td>' . get_the_excerpt() . '</td>';
+	 echo '<td>' . esc_html($price) . '</td>';
+	 echo '</tr>';
+	 endwhile;
+	 echo '</tbody></table>';
+	 } elseif ($atts['layout'] === 'thumbnail') {
 		echo '<div class="wpcl-courses-thumbnails">';
 		while ($query->have_posts()) : $query->the_post();
 			$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
@@ -225,16 +213,13 @@ function wpcl_courses_shortcode($atts) {
 			echo '</div>';
 		endwhile;
 		echo '</div>';
-	} else { // bullet
-		echo '<ul class="wpcl-courses-bullet">';
-		while ($query->have_posts()) : $query->the_post();
-			$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-			$url = get_post_meta(get_the_ID(), '_wpcl_course_post_url', true);
-			echo '<li><strong>' . get_the_title() . '</strong> (' . esc_html($price) . ')<br />' . get_the_excerpt();
-			if ($url) echo '<br /><a href="' . esc_url($url) . '" target="_blank">View Course</a>';
-			echo '</li>';
-		endwhile;
-		echo '</ul>';
+	 } else { // bullet
+	 echo '<ul class="wpcl-courses-bullet">';
+	 while ($query->have_posts()) : $query->the_post();
+	 $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+	 echo '<li><strong>' . get_the_title() . '</strong> (' . esc_html($price) . ')<br />' . get_the_excerpt() . '</li>';
+	 endwhile;
+	 echo '</ul>';
 	}
 	wp_reset_postdata();
 	return ob_get_clean();
