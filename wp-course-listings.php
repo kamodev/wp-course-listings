@@ -3,7 +3,7 @@
 Plugin Name: WP Course Listings
 Plugin URI: https://nrds.life
 Description: Manage and display courses with custom fields, categories, and display shortcodes.
-Version: 1.0
+Version: 1.0.3
 Author: Jeremiah Bagula
 Author URI: https://nrds.life
 Text Domain: wp-course-listings
@@ -161,10 +161,12 @@ add_action('save_post', 'wpcl_save_course_meta');
 
 // Shortcode to Display Courses
 function wpcl_courses_shortcode($atts) {
-	$atts = shortcode_atts(array(
-		'category' => '',
-		'layout' => 'bullet', // bullet, table, thumbnail
-	), $atts, 'wpcl_courses');
+    $atts = shortcode_atts(array(
+        'category' => '',
+        'layout' => 'bullet', // bullet, table, thumbnail
+    ), $atts, 'wpcl_courses');
+
+    $hide_price = get_option('wpcl_disable_price', 0);
 
 	$args = array(
 		'post_type' => 'course',
@@ -184,17 +186,19 @@ function wpcl_courses_shortcode($atts) {
 
 	ob_start();
 	 if ($atts['layout'] === 'table') {
-	 echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th><th>Price</th></tr></thead><tbody>';
+	 echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-bottom:10px;">Course Listings</div>';
+	 echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th>';
+	 if (!$hide_price) echo '<th>Price</th>';
+	 echo '</tr></thead><tbody>';
 	 while ($query->have_posts()) : $query->the_post();
-	 $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-	 $img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
-	 echo '<tr>';
-	 echo '<td><a href="' . esc_url($permalink) . '">';
-	 echo get_the_title();
-	 echo '</td>';
-	 echo '<td>' . get_the_excerpt() . '</td>';
-	 echo '<td>' . esc_html($price) . '</td>';
-	 echo '</tr>';
+	 	$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+	 	$permalink = get_permalink(get_the_ID());
+	 	$img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
+	 	echo '<tr>';
+	 	echo '<td><a href="' . esc_url($permalink) . '">' . get_the_title() . '</a></td>';
+	 	echo '<td>' . get_the_excerpt() . '</td>';
+	 	if (!$hide_price) echo '<td>' . esc_html($price) . '</td>';
+	 	echo '</tr>';
 	 endwhile;
 	 echo '</tbody></table>';
 	 } elseif ($atts['layout'] === 'thumbnail') {
@@ -211,28 +215,98 @@ function wpcl_courses_shortcode($atts) {
 			}
 			echo '<h3><a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">' . get_the_title() . '</a></h3>';
 			echo '<div>' . get_the_excerpt() . '</div>';
-			echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
+			if (!$hide_price) echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
 			echo '</div>';
 		endwhile;
 		echo '</div>';
 	 } else { // bullet
 	 echo '<ul class="wpcl-courses-bullet">';
-	 	while ($query->have_posts()) : $query->the_post();
-	 		$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-	 		echo '<li><strong>' . get_the_title() . '</strong> (' . esc_html($price) . ')<br />' . get_the_excerpt() . '</li>';
-	 	endwhile;
-	 echo '</ul>';
+        while ($query->have_posts()) : $query->the_post();
+            $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+            $categories = get_the_terms(get_the_ID(), 'course_category');
+            $cat_links = '';
+            if ($categories && !is_wp_error($categories)) {
+                $cat_arr = array();
+                foreach ($categories as $cat) {
+                    $cat_arr[] = '<a href="' . esc_url(get_term_link($cat)) . '">' . esc_html($cat->name) . '</a>';
+                }
+                $cat_links = ' | Category: ' . implode(', ', $cat_arr);
+            }
+            $permalink = get_permalink();
+            echo '<li><a href="' . esc_url($permalink) . '"><strong>' . get_the_title() . '</strong></a>' . $cat_links;
+            if (!$hide_price) echo ' (' . esc_html($price) . ')';
+            echo '<br />' . get_the_excerpt() . '</li>';
+        endwhile;
+    echo '</ul>';
 	}
 	wp_reset_postdata();
 	return ob_get_clean();
 }
 add_shortcode('wpcl_courses', 'wpcl_courses_shortcode');
 
+// [wpcl_course_listing_by_category] shortcode: Show all courses grouped by category
+function wpcl_courses_by_category_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'show_empty' => false,
+    ), $atts, 'wpcl_course_listing_by_category');
+
+    $terms = get_terms(array(
+        'taxonomy' => 'course_category',
+        'hide_empty' => !$atts['show_empty'],
+    ));
+    if (empty($terms) || is_wp_error($terms)) return '<p>No course categories found.</p>';
+
+    $hide_price = get_option('wpcl_disable_price', 0);
+    ob_start();
+    echo '<div class="wpcl-courses-by-category">';
+    foreach ($terms as $term) {
+        echo '<section class="wpcl-category-section" style="margin-bottom:2.5em;">';
+        echo '<h2 class="wpcl-category-title" style="font-size:1.2em;margin-bottom:0.5em;">' . esc_html($term->name) . '</h2>';
+        $query = new WP_Query(array(
+            'post_type' => 'course',
+            'posts_per_page' => -1,
+            'tax_query' => array(array(
+                'taxonomy' => 'course_category',
+                'field' => 'term_id',
+                'terms' => $term->term_id,
+            )),
+        ));
+        if ($query->have_posts()) {
+            echo '<div class="wpcl-courses-thumbnails">';
+            while ($query->have_posts()) : $query->the_post();
+                $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+                $permalink = get_permalink();
+                echo '<div class="wpcl-course-thumb">';
+                if (has_post_thumbnail()) {
+                    $thumb_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+                    echo '<a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">';
+                    echo '<img src="' . esc_url($thumb_url) . '" alt="' . esc_attr(get_the_title()) . '" class="wpcl-thumb-img" />';
+                    echo '</a>';
+                }
+                echo '<h3><a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">' . get_the_title() . '</a></h3>';
+                echo '<div>' . get_the_excerpt() . '</div>';
+                if (!$hide_price) echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
+                echo '</div>';
+            endwhile;
+            echo '</div>';
+        } else {
+            echo '<p>No courses in this category.</p>';
+        }
+        wp_reset_postdata();
+        echo '</section>';
+    }
+    echo '</div>';
+    return ob_get_clean();
+}
+add_shortcode('wpcl_course_listing_by_category', 'wpcl_courses_by_category_shortcode');
+
 // Add basic styles
 function wpcl_courses_styles() {
 	echo '<style>
-	.wpcl-courses-table { width:100%; border-collapse:collapse; }
-	.wpcl-courses-table th, .wpcl-courses-table td { border:1px solid #ccc; padding:8px; }
+	.wpcl-courses-table { width:100%; border-collapse:collapse; background:#fff; box-shadow:none; border:1px solid #e0e0e0; }
+	.wpcl-courses-table th, .wpcl-courses-table td { border:1px solid #e0e0e0; padding:8px 10px; background:#fff; font-weight:400; }
+	.wpcl-courses-table th { background:#f7f7f7; font-weight:600; }
+	.wpcl-courses-table-title { font-size:1.3em; font-weight:600; margin-bottom:10px; }
 	.wpcl-courses-thumbnails { margin-top:20px; display:flex; flex-wrap:wrap; gap:20px; }
 	.wpcl-course-thumb { background:#fafafa; width:200px; border:1px solid #ccc; padding:10px; text-align:center; transition: box-shadow 0.3s, transform 0.3s; position:relative; }
 	.wpcl-course-thumb:hover { box-shadow:0 4px 16px rgba(0,0,0,0.15); transform:translateY(-4px) scale(1.03); z-index:2; }
@@ -244,4 +318,47 @@ function wpcl_courses_styles() {
 }
 add_action('wp_head', 'wpcl_courses_styles');
 
-?>
+// Add category to course permalinks
+add_filter('post_type_link', function($post_link, $post) {
+    if ($post->post_type === 'course') {
+        $terms = get_the_terms($post->ID, 'course_category');
+        if ($terms && !is_wp_error($terms)) {
+            $category = array_shift($terms);
+            if ($category) {
+                $post_link = str_replace('course/', 'course/' . $category->slug . '/', $post_link);
+            }
+        }
+    }
+    return $post_link;
+}, 10, 2);
+
+// Add rewrite rule for course permalinks with category
+add_action('init', function() {
+    add_rewrite_rule('^course/([^/]+)/([^/]+)/?$', 'index.php?course=$matches[2]', 'top');
+});
+
+// Admin setting: Disable showing price on courses
+add_action('admin_menu', function() {
+    add_options_page('WPCL Settings', 'WPCL Settings', 'manage_options', 'wpcl-settings', 'wpcl_settings_page');
+});
+
+function wpcl_settings_page() {
+    ?>
+    <div class="wrap">
+        <h1>WP Course Listings Settings</h1>
+        <form method="post" action="options.php">
+            <?php settings_fields('wpcl_settings_group'); do_settings_sections('wpcl_settings_group'); ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">Disable Price Display</th>
+                    <td><input type="checkbox" name="wpcl_disable_price" value="1" <?php checked(1, get_option('wpcl_disable_price', 0)); ?> /> Hide price on all course listings</td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
+}
+add_action('admin_init', function() {
+    register_setting('wpcl_settings_group', 'wpcl_disable_price');
+});
