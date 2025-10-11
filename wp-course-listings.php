@@ -167,6 +167,8 @@ function wpcl_courses_shortcode($atts) {
     ), $atts, 'wpcl_courses');
 
     $hide_price = get_option('wpcl_disable_price', 0);
+    $title_text = get_option('wpcl_table_title_text', 'Course Listings');
+    $title_placement = get_option('wpcl_table_title_placement', 'above');
 
 	$args = array(
 		'post_type' => 'course',
@@ -186,21 +188,22 @@ function wpcl_courses_shortcode($atts) {
 
 	ob_start();
 	 if ($atts['layout'] === 'table') {
-	 echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-bottom:10px;">Course Listings</div>';
-	 echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th>';
-	 if (!$hide_price) echo '<th>Price</th>';
-	 echo '</tr></thead><tbody>';
-	 while ($query->have_posts()) : $query->the_post();
-	 	$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-	 	$permalink = get_permalink(get_the_ID());
-	 	$img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
-	 	echo '<tr>';
-	 	echo '<td><a href="' . esc_url($permalink) . '">' . get_the_title() . '</a></td>';
-	 	echo '<td>' . get_the_excerpt() . '</td>';
-	 	if (!$hide_price) echo '<td>' . esc_html($price) . '</td>';
-	 	echo '</tr>';
+		if ($title_placement === 'above') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-bottom:10px;">' . esc_html($title_text) . '</div>';
+		echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th>';
+		if (!$hide_price) echo '<th>Price</th>';
+		echo '</tr></thead><tbody>';
+		while ($query->have_posts()) : $query->the_post();
+			$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+			$permalink = get_permalink(get_the_ID());
+			$img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
+			echo '<tr>';
+			echo '<td><a href="' . esc_url($permalink) . '">' . get_the_title() . '</a></td>';
+			echo '<td>' . get_the_excerpt() . '</td>';
+			if (!$hide_price) echo '<td>' . esc_html($price) . '</td>';
+			echo '</tr>';
 	 endwhile;
 	 echo '</tbody></table>';
+	 if ($title_placement === 'below') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-top:10px;">' . esc_html($title_text) . '</div>';
 	 } elseif ($atts['layout'] === 'thumbnail') {
 		echo '<div class="wpcl-courses-thumbnails">';
 		while ($query->have_posts()) : $query->the_post();
@@ -342,7 +345,14 @@ add_action('admin_menu', function() {
     add_options_page('WPCL Settings', 'WPCL Settings', 'manage_options', 'wpcl-settings', 'wpcl_settings_page');
 });
 
+// Admin setting: Custom table title and placement
+add_action('admin_menu', function() {
+    add_options_page('WPCL Settings', 'WPCL Settings', 'manage_options', 'wpcl-settings', 'wpcl_settings_page');
+});
+
 function wpcl_settings_page() {
+    $title_text = get_option('wpcl_table_title_text', 'Course Listings');
+    $title_placement = get_option('wpcl_table_title_placement', 'above');
     ?>
     <div class="wrap">
         <h1>WP Course Listings Settings</h1>
@@ -353,6 +363,22 @@ function wpcl_settings_page() {
                     <th scope="row">Disable Price Display</th>
                     <td><input type="checkbox" name="wpcl_disable_price" value="1" <?php checked(1, get_option('wpcl_disable_price', 0)); ?> /> Hide price on all course listings</td>
                 </tr>
+                <tr valign="top">
+                    <th scope="row">Table Title Text</th>
+                    <td><input type="text" name="wpcl_table_title_text" value="<?php echo esc_attr($title_text); ?>" style="width: 300px;" />
+                    <p class="description">Custom title for course tables. Default: "Course Listings"</p></td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Table Title Placement</th>
+                    <td>
+                        <select name="wpcl_table_title_placement">
+                            <option value="above" <?php selected($title_placement, 'above'); ?>>Above Table</option>
+                            <option value="below" <?php selected($title_placement, 'below'); ?>>Below Table</option>
+                            <option value="none" <?php selected($title_placement, 'none'); ?>>Do Not Show</option>
+                        </select>
+                        <p class="description">Where to display the table title.</p>
+                    </td>
+                </tr>
             </table>
             <?php submit_button(); ?>
         </form>
@@ -361,4 +387,6 @@ function wpcl_settings_page() {
 }
 add_action('admin_init', function() {
     register_setting('wpcl_settings_group', 'wpcl_disable_price');
+    register_setting('wpcl_settings_group', 'wpcl_table_title_text');
+    register_setting('wpcl_settings_group', 'wpcl_table_title_placement');
 });
