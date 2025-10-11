@@ -169,6 +169,7 @@ function wpcl_courses_shortcode($atts) {
     $hide_price = get_option('wpcl_disable_price', 0);
     $title_text = get_option('wpcl_table_title_text', 'Course Listings');
     $title_placement = get_option('wpcl_table_title_placement', 'above');
+    // Author/creator/editor display is intentionally omitted per user request
 
 	$args = array(
 		'post_type' => 'course',
@@ -184,46 +185,47 @@ function wpcl_courses_shortcode($atts) {
 		);
 	}
 	$query = new WP_Query($args);
-	if (!$query->have_posts()) return '<p>No courses found.</p>';
+    if (!$query->have_posts()) return '<p>No courses found.</p>';
 
-	ob_start();
-	 if ($atts['layout'] === 'table') {
-		if ($title_placement === 'above') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-bottom:10px;">' . esc_html($title_text) . '</div>';
-		echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th>';
-		if (!$hide_price) echo '<th>Price</th>';
-		echo '</tr></thead><tbody>';
-		while ($query->have_posts()) : $query->the_post();
-			$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-			$permalink = get_permalink(get_the_ID());
-			$img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
-			echo '<tr>';
-			echo '<td><a href="' . esc_url($permalink) . '">' . get_the_title() . '</a></td>';
-			echo '<td>' . get_the_excerpt() . '</td>';
-			if (!$hide_price) echo '<td>' . esc_html($price) . '</td>';
-			echo '</tr>';
-	 endwhile;
-	 echo '</tbody></table>';
-	 if ($title_placement === 'below') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-top:10px;">' . esc_html($title_text) . '</div>';
-	 } elseif ($atts['layout'] === 'thumbnail') {
-		echo '<div class="wpcl-courses-thumbnails">';
-		while ($query->have_posts()) : $query->the_post();
-			$price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-			$permalink = get_permalink();
-			echo '<div class="wpcl-course-thumb">';
-			if (has_post_thumbnail()) {
-				$thumb_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
-				echo '<a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">';
-				echo '<img src="' . esc_url($thumb_url) . '" alt="' . esc_attr(get_the_title()) . '" class="wpcl-thumb-img" />';
-				echo '</a>';
-			}
-			echo '<h3><a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">' . get_the_title() . '</a></h3>';
-			echo '<div>' . get_the_excerpt() . '</div>';
-			if (!$hide_price) echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
-			echo '</div>';
-		endwhile;
-		echo '</div>';
-	 } else { // bullet
-	 echo '<ul class="wpcl-courses-bullet">';
+    ob_start();
+    // No author/creator/editor output in any layout
+    if ($atts['layout'] === 'table') {
+        if ($title_placement === 'above') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-bottom:10px;">' . esc_html($title_text) . '</div>';
+        echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th>';
+        if (!$hide_price) echo '<th>Price</th>';
+        echo '</tr></thead><tbody>';
+        while ($query->have_posts()) : $query->the_post();
+            $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+            $permalink = get_permalink(get_the_ID());
+            $img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
+            echo '<tr>';
+            echo '<td><a href="' . esc_url($permalink) . '">' . get_the_title() . '</a></td>';
+            echo '<td>' . get_the_excerpt() . '</td>';
+            if (!$hide_price) echo '<td>' . esc_html($price) . '</td>';
+            echo '</tr>';
+        endwhile;
+        echo '</tbody></table>';
+        if ($title_placement === 'below') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-top:10px;">' . esc_html($title_text) . '</div>';
+    } elseif ($atts['layout'] === 'thumbnail') {
+        echo '<div class="wpcl-courses-thumbnails">';
+        while ($query->have_posts()) : $query->the_post();
+            $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+            $permalink = get_permalink();
+            echo '<div class="wpcl-course-thumb">';
+            if (has_post_thumbnail()) {
+                $thumb_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+                echo '<a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">';
+                echo '<img src="' . esc_url($thumb_url) . '" alt="' . esc_attr(get_the_title()) . '" class="wpcl-thumb-img" />';
+                echo '</a>';
+            }
+            echo '<h3><a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">' . get_the_title() . '</a></h3>';
+            echo '<div>' . get_the_excerpt() . '</div>';
+            if (!$hide_price) echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
+            echo '</div>';
+        endwhile;
+        echo '</div>';
+    } else { // bullet
+        echo '<ul class="wpcl-courses-bullet">';
         while ($query->have_posts()) : $query->the_post();
             $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
             $categories = get_the_terms(get_the_ID(), 'course_category');
@@ -240,10 +242,10 @@ function wpcl_courses_shortcode($atts) {
             if (!$hide_price) echo ' (' . esc_html($price) . ')';
             echo '<br />' . get_the_excerpt() . '</li>';
         endwhile;
-    echo '</ul>';
-	}
-	wp_reset_postdata();
-	return ob_get_clean();
+        echo '</ul>';
+    }
+    wp_reset_postdata();
+    return ob_get_clean();
 }
 add_shortcode('wpcl_courses', 'wpcl_courses_shortcode');
 
@@ -261,6 +263,7 @@ function wpcl_courses_by_category_shortcode($atts) {
 
     $hide_price = get_option('wpcl_disable_price', 0);
     ob_start();
+    // No author/creator/editor output in category listing
     echo '<div class="wpcl-courses-by-category">';
     foreach ($terms as $term) {
         echo '<section class="wpcl-category-section" style="margin-bottom:2.5em;">';
@@ -389,4 +392,109 @@ add_action('admin_init', function() {
     register_setting('wpcl_settings_group', 'wpcl_disable_price');
     register_setting('wpcl_settings_group', 'wpcl_table_title_text');
     register_setting('wpcl_settings_group', 'wpcl_table_title_placement');
+});
+
+// Add meta box for SEO and structured data metadata
+function wpcl_add_seo_meta_box() {
+    add_meta_box('wpcl_seo_meta', 'SEO & Structured Data', 'wpcl_seo_meta_box_callback', 'course', 'normal', 'default');
+}
+add_action('add_meta_boxes', 'wpcl_add_seo_meta_box');
+
+function wpcl_seo_meta_box_callback($post) {
+    $meta = get_post_meta($post->ID);
+    $fields = array(
+        // Core
+        'meta_title' => 'Meta Title',
+        'meta_description' => 'Meta Description',
+        'meta_keywords' => 'Meta Keywords',
+        // Open Graph
+        'og_title' => 'OG Title',
+        'og_description' => 'OG Description',
+        'og_type' => 'OG Type',
+        'og_image' => 'OG Image URL',
+        // Twitter Card
+        'twitter_title' => 'Twitter Title',
+        'twitter_description' => 'Twitter Description',
+        'twitter_image' => 'Twitter Image URL',
+        'twitter_card' => 'Twitter Card Type',
+        // Schema.org
+        'schema_type' => 'Schema.org Type',
+        'schema_json' => 'Custom JSON-LD (overrides auto)',
+        // Rare/other
+        'robots' => 'Robots',
+        'canonical' => 'Canonical URL',
+        'author' => 'Meta Author',
+        'publisher' => 'Meta Publisher',
+        'copyright' => 'Meta Copyright',
+    );
+    echo '<table class="form-table">';
+    foreach ($fields as $key => $label) {
+        $val = isset($meta[$key][0]) ? esc_attr($meta[$key][0]) : '';
+        $type = ($key === 'meta_description' || $key === 'og_description' || $key === 'twitter_description' || $key === 'schema_json') ? 'textarea' : 'text';
+        echo '<tr><th><label for="wpcl_' . $key . '">' . esc_html($label) . '</label></th><td>';
+        if ($type === 'textarea') {
+            echo '<textarea id="wpcl_' . $key . '" name="wpcl_' . $key . '" rows="2" style="width:100%">' . esc_textarea($val) . '</textarea>';
+        } else {
+            echo '<input type="text" id="wpcl_' . $key . '" name="wpcl_' . $key . '" value="' . $val . '" style="width:100%" />';
+        }
+        echo '</td></tr>';
+    }
+    echo '</table>';
+    echo '<p class="description">Leave blank to omit. Custom JSON-LD will override auto schema if provided.</p>';
+}
+
+// Save all SEO/meta fields
+add_action('save_post_course', function($post_id) {
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+    $fields = array(
+        'meta_title','meta_description','meta_keywords','og_title','og_description','og_type','og_image',
+        'twitter_title','twitter_description','twitter_image','twitter_card','schema_type','schema_json',
+        'robots','canonical','author','publisher','copyright'
+    );
+    foreach ($fields as $key) {
+        if (isset($_POST['wpcl_' . $key])) {
+            update_post_meta($post_id, $key, sanitize_text_field($_POST['wpcl_' . $key]));
+        } else {
+            delete_post_meta($post_id, $key);
+        }
+    }
+});
+
+// Output meta tags in head for course posts
+add_action('wp_head', function() {
+    if (!is_singular('course')) return;
+    global $post;
+    $meta = get_post_meta($post->ID);
+    // Core
+    if (!empty($meta['meta_title'][0])) echo '<title>' . esc_html($meta['meta_title'][0]) . '</title>' . "\n";
+    if (!empty($meta['meta_description'][0])) echo '<meta name="description" content="' . esc_attr($meta['meta_description'][0]) . '" />' . "\n";
+    if (!empty($meta['meta_keywords'][0])) echo '<meta name="keywords" content="' . esc_attr($meta['meta_keywords'][0]) . '" />' . "\n";
+    if (!empty($meta['robots'][0])) echo '<meta name="robots" content="' . esc_attr($meta['robots'][0]) . '" />' . "\n";
+    if (!empty($meta['canonical'][0])) echo '<link rel="canonical" href="' . esc_url($meta['canonical'][0]) . '" />' . "\n";
+    if (!empty($meta['author'][0])) echo '<meta name="author" content="' . esc_attr($meta['author'][0]) . '" />' . "\n";
+    if (!empty($meta['publisher'][0])) echo '<meta name="publisher" content="' . esc_attr($meta['publisher'][0]) . '" />' . "\n";
+    if (!empty($meta['copyright'][0])) echo '<meta name="copyright" content="' . esc_attr($meta['copyright'][0]) . '" />' . "\n";
+    // Open Graph
+    if (!empty($meta['og_title'][0])) echo '<meta property="og:title" content="' . esc_attr($meta['og_title'][0]) . '" />' . "\n";
+    if (!empty($meta['og_description'][0])) echo '<meta property="og:description" content="' . esc_attr($meta['og_description'][0]) . '" />' . "\n";
+    if (!empty($meta['og_type'][0])) echo '<meta property="og:type" content="' . esc_attr($meta['og_type'][0]) . '" />' . "\n";
+    if (!empty($meta['og_image'][0])) echo '<meta property="og:image" content="' . esc_url($meta['og_image'][0]) . '" />' . "\n";
+    // Twitter
+    if (!empty($meta['twitter_title'][0])) echo '<meta name="twitter:title" content="' . esc_attr($meta['twitter_title'][0]) . '" />' . "\n";
+    if (!empty($meta['twitter_description'][0])) echo '<meta name="twitter:description" content="' . esc_attr($meta['twitter_description'][0]) . '" />' . "\n";
+    if (!empty($meta['twitter_image'][0])) echo '<meta name="twitter:image" content="' . esc_url($meta['twitter_image'][0]) . '" />' . "\n";
+    if (!empty($meta['twitter_card'][0])) echo '<meta name="twitter:card" content="' . esc_attr($meta['twitter_card'][0]) . '" />' . "\n";
+    // Schema.org/JSON-LD
+    if (!empty($meta['schema_json'][0])) {
+        echo '<script type="application/ld+json">' . $meta['schema_json'][0] . '</script>' . "\n";
+    } elseif (!empty($meta['schema_type'][0])) {
+        $schema = array(
+            '@context' => 'https://schema.org',
+            '@type' => esc_attr($meta['schema_type'][0]),
+            'name' => get_the_title($post),
+            'description' => get_the_excerpt($post),
+            'url' => get_permalink($post),
+        );
+        echo '<script type="application/ld+json">' . wp_json_encode($schema) . '</script>' . "\n";
+    }
 });
