@@ -1,500 +1,540 @@
 <?php
 /*
 Plugin Name: WP Course Listings
-Plugin URI: https://nrds.life
-Description: Manage and display courses with custom fields, categories, and display shortcodes.
-Version: 1.0.3
+Description: Adds a "Course" custom post type with categories and a course listing page.
+Version: 1.0
 Author: Jeremiah Bagula
-Author URI: https://nrds.life
-Text Domain: wp-course-listings
 */
 
-// Show the Course Post Image at the top of the single course post
-function wpcl_show_course_post_image($content) {
-	if (is_singular('course') && in_the_loop() && is_main_query()) {
-		$img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
-		if ($img) {
-			$img_html = '<div class="wpcl-course-post-image" style="margin-bottom:24px;text-align:center;"><img src="' . esc_url($img) . '" alt="' . esc_attr(get_the_title()) . '" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.08);" /></div>';
-			return $img_html . $content;
-		}
-	}
-	return $content;
-}
-add_filter('the_content', 'wpcl_show_course_post_image');
-
-// Plugin activation: register post type/taxonomy and flush rewrite rules
-function wpcl_plugin_activate() {
-	// Register post type and taxonomy so rewrite rules exist
-	wpcl_register_course_post_type();
-	wpcl_register_course_category();
-	flush_rewrite_rules();
-}
-register_activation_hook(__FILE__, 'wpcl_plugin_activate');
-
 // Register Custom Post Type: Course
-function wpcl_register_course_post_type() {
-	$labels = array(
-		'name' => 'Courses',
-		'singular_name' => 'Course',
-		'add_new' => 'Add New',
-		'add_new_item' => 'Add New Course',
-		'edit_item' => 'Edit Course',
-		'new_item' => 'New Course',
-		'view_item' => 'View Course',
-		'search_items' => 'Search Courses',
-		'not_found' => 'No courses found',
-		'not_found_in_trash' => 'No courses found in Trash',
-		'all_items' => 'All Courses',
-		'menu_name' => 'Courses',
-	);
-	$args = array(
-		'labels' => $labels,
-		'public' => true,
-		'has_archive' => true,
-		'supports' => array('title', 'editor', 'thumbnail', 'author', 'excerpt', 'revisions'),
-		'menu_icon' => 'dashicons-welcome-learn-more',
-		'show_in_rest' => true,
-		'rewrite' => array('slug' => 'course', 'with_front' => true),
-		'publicly_queryable' => true,
-		'show_ui' => true,
-		'show_in_menu' => true,
-		'capability_type' => 'post',
-	);
-	register_post_type('course', $args);
+function wcl_register_course_post_type() {
+    $labels = array(
+        'name' => 'Courses',
+        'singular_name' => 'Course',
+        'add_new' => 'Add New',
+        'add_new_item' => 'Add New Course',
+        'edit_item' => 'Edit Course',
+        'new_item' => 'New Course',
+        'view_item' => 'View Course',
+        'search_items' => 'Search Courses',
+        'not_found' => 'No courses found',
+        'not_found_in_trash' => 'No courses found in Trash',
+        'all_items' => 'All Courses',
+        'menu_name' => 'Courses',
+    );
+    $args = array(
+        'labels' => $labels,
+        'public' => true,
+        'has_archive' => true,
+        'rewrite' => array('slug' => 'courses'),
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+        'show_in_rest' => true,
+        'taxonomies' => array('course_category'),
+    );
+    register_post_type('course', $args);
 }
-add_action('init', 'wpcl_register_course_post_type');
+add_action('init', 'wcl_register_course_post_type');
 
 // Register Custom Taxonomy: Course Category
-function wpcl_register_course_category() {
-	$labels = array(
-		'name' => 'Course Categories',
-		'singular_name' => 'Course Category',
-		'search_items' => 'Search Course Categories',
-		'all_items' => 'All Course Categories',
-		'edit_item' => 'Edit Course Category',
-		'update_item' => 'Update Course Category',
-		'add_new_item' => 'Add New Course Category',
-		'new_item_name' => 'New Course Category Name',
-		'menu_name' => 'Course Categories',
-	);
-	$args = array(
-		'hierarchical' => true,
-		'labels' => $labels,
-		'show_ui' => true,
-		'show_admin_column' => true,
-		'query_var' => true,
-		'rewrite' => array('slug' => 'course-category'),
-		'show_in_rest' => true,
-	);
-	register_taxonomy('course_category', array('course'), $args);
+function wcl_register_course_category_taxonomy() {
+    $labels = array(
+        'name' => 'Course Categories',
+        'singular_name' => 'Course Category',
+        'search_items' => 'Search Course Categories',
+        'all_items' => 'All Course Categories',
+        'edit_item' => 'Edit Course Category',
+        'update_item' => 'Update Course Category',
+        'add_new_item' => 'Add New Course Category',
+        'new_item_name' => 'New Course Category Name',
+        'menu_name' => 'Course Categories',
+    );
+    $args = array(
+        'hierarchical' => true,
+        'labels' => $labels,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'rewrite' => array('slug' => 'course-category'),
+        'show_in_rest' => true,
+    );
+    register_taxonomy('course_category', array('course'), $args);
 }
-add_action('init', 'wpcl_register_course_category');
+add_action('init', 'wcl_register_course_category_taxonomy');
 
-// Add Meta Boxes for Price, Post Image, Thumbnail Image
-function wpcl_add_course_meta_boxes() {
-	add_meta_box('wpcl_course_price', 'Course Price', 'wpcl_course_price_callback', 'course', 'side');
-	add_meta_box('wpcl_course_post_image', 'Post Image URL', 'wpcl_course_post_image_callback', 'course', 'normal');
-}
-add_action('add_meta_boxes', 'wpcl_add_course_meta_boxes');
-
-function wpcl_course_price_callback($post) {
-	$value = get_post_meta($post->ID, '_wpcl_course_price', true);
-	echo '<input type="text" name="wpcl_course_price" value="' . esc_attr($value) . '" style="width:100%;" />';
-}
-
-function wpcl_course_post_image_callback($post) {
-		$value = get_post_meta($post->ID, '_wpcl_course_post_image', true);
-		$image_preview = $value ? '<img src="' . esc_url($value) . '" style="max-width:100%;height:auto;display:block;margin-bottom:10px;" />' : '';
-		echo '<div id="wpcl-course-post-image-wrapper">' . $image_preview . '</div>';
-		echo '<input type="hidden" id="wpcl_course_post_image" name="wpcl_course_post_image" value="' . esc_attr($value) . '" />';
-		echo '<button type="button" class="button" id="wpcl_select_post_image">Select Image</button> ';
-		echo '<button type="button" class="button" id="wpcl_remove_post_image">Remove Image</button>';
-		?>
-		<script>
-		(function($){
-			$(function(){
-				var frame;
-				$('#wpcl_select_post_image').on('click', function(e){
-					e.preventDefault();
-					if (frame) { frame.open(); return; }
-					frame = wp.media({
-						title: 'Select or Upload Image',
-						button: { text: 'Use this image' },
-						multiple: false
-					});
-					frame.on('select', function(){
-						var attachment = frame.state().get('selection').first().toJSON();
-						$('#wpcl_course_post_image').val(attachment.url);
-						$('#wpcl-course-post-image-wrapper').html('<img src="'+attachment.url+'" style="max-width:100%;height:auto;display:block;margin-bottom:10px;" />');
-					});
-					frame.open();
-				});
-				$('#wpcl_remove_post_image').on('click', function(e){
-					e.preventDefault();
-					$('#wpcl_course_post_image').val('');
-					$('#wpcl-course-post-image-wrapper').html('');
-				});
-			});
-		})(jQuery);
-		</script>
-		<?php
-// Enqueue media uploader for admin
-function wpcl_enqueue_admin_media($hook) {
-	if ('post.php' === $hook || 'post-new.php' === $hook) {
-		wp_enqueue_media();
-	}
-}
-add_action('admin_enqueue_scripts', 'wpcl_enqueue_admin_media');
-}
-
-
-// Save Meta Box Data
-function wpcl_save_course_meta($post_id) {
-	if (array_key_exists('wpcl_course_price', $_POST)) {
-		update_post_meta($post_id, '_wpcl_course_price', sanitize_text_field($_POST['wpcl_course_price']));
-	}
-	if (array_key_exists('wpcl_course_post_image', $_POST)) {
-		update_post_meta($post_id, '_wpcl_course_post_image', esc_url_raw($_POST['wpcl_course_post_image']));
-	}
-}
-add_action('save_post', 'wpcl_save_course_meta');
-
-// Shortcode to Display Courses
-function wpcl_courses_shortcode($atts) {
-    $atts = shortcode_atts(array(
-        'category' => '',
-        'layout' => 'bullet', // bullet, table, thumbnail
-    ), $atts, 'wpcl_courses');
-
-    $hide_price = get_option('wpcl_disable_price', 0);
-    $title_text = get_option('wpcl_table_title_text', 'Course Listings');
-    $title_placement = get_option('wpcl_table_title_placement', 'above');
-    // Author/creator/editor display is intentionally omitted per user request
-
-	$args = array(
-		'post_type' => 'course',
-		'posts_per_page' => -1,
-	);
-	if ($atts['category']) {
-		$args['tax_query'] = array(
-			array(
-				'taxonomy' => 'course_category',
-				'field' => 'slug',
-				'terms' => $atts['category'],
-			),
-		);
-	}
-	$query = new WP_Query($args);
-    if (!$query->have_posts()) return '<p>No courses found.</p>';
-
-    ob_start();
-    // No author/creator/editor output in any layout
-    if ($atts['layout'] === 'table') {
-        if ($title_placement === 'above') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-bottom:10px;">' . esc_html($title_text) . '</div>';
-        echo '<table class="wpcl-courses-table"><thead><tr><th>Title</th><th>Description</th>';
-        if (!$hide_price) echo '<th>Price</th>';
-        echo '</tr></thead><tbody>';
-        while ($query->have_posts()) : $query->the_post();
-            $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-            $permalink = get_permalink(get_the_ID());
-            $img = get_post_meta(get_the_ID(), '_wpcl_course_post_image', true);
-            echo '<tr>';
-            echo '<td><a href="' . esc_url($permalink) . '">' . get_the_title() . '</a></td>';
-            echo '<td>' . get_the_excerpt() . '</td>';
-            if (!$hide_price) echo '<td>' . esc_html($price) . '</td>';
-            echo '</tr>';
-        endwhile;
-        echo '</tbody></table>';
-        if ($title_placement === 'below') echo '<div class="wpcl-courses-table-title" style="font-size:1.3em;font-weight:600;margin-top:10px;">' . esc_html($title_text) . '</div>';
-    } elseif ($atts['layout'] === 'thumbnail') {
-        echo '<div class="wpcl-courses-thumbnails">';
-        while ($query->have_posts()) : $query->the_post();
-            $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-            $permalink = get_permalink();
-            echo '<div class="wpcl-course-thumb">';
+// Shortcode to display course listings
+function wcl_course_listing_shortcode($atts) {
+    $args = array(
+        'post_type' => 'course',
+        'posts_per_page' => -1,
+        'post_status' => 'publish',
+    );
+    $query = new WP_Query($args);
+    if ($query->have_posts()) {
+        $output = '<div class="wcl-course-listings">';
+        while ($query->have_posts()) {
+            $query->the_post();
+            $output .= '<div class="wcl-course">';
             if (has_post_thumbnail()) {
-                $thumb_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
-                echo '<a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">';
-                echo '<img src="' . esc_url($thumb_url) . '" alt="' . esc_attr(get_the_title()) . '" class="wpcl-thumb-img" />';
-                echo '</a>';
+                $output .= '<div class="wcl-course-thumb">' . get_the_post_thumbnail(get_the_ID(), 'medium') . '</div>';
             }
-            echo '<h3><a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">' . get_the_title() . '</a></h3>';
-            echo '<div>' . get_the_excerpt() . '</div>';
-            if (!$hide_price) echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
-            echo '</div>';
-        endwhile;
-        echo '</div>';
-    } else { // bullet
-        echo '<ul class="wpcl-courses-bullet">';
-        while ($query->have_posts()) : $query->the_post();
-            $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
+            $output .= '<h2 class="wcl-course-title"><a href="' . get_permalink() . '">' . get_the_title() . '</a></h2>';
+            $output .= '<div class="wcl-course-excerpt">' . get_the_excerpt() . '</div>';
             $categories = get_the_terms(get_the_ID(), 'course_category');
-            $cat_links = '';
             if ($categories && !is_wp_error($categories)) {
-                $cat_arr = array();
+                $output .= '<div class="wcl-course-categories"><strong>Categories:</strong> ';
+                $cat_links = array();
                 foreach ($categories as $cat) {
-                    $cat_arr[] = '<a href="' . esc_url(get_term_link($cat)) . '">' . esc_html($cat->name) . '</a>';
+                    $cat_links[] = esc_html($cat->name);
                 }
-                $cat_links = ' | Category: ' . implode(', ', $cat_arr);
+                $output .= implode(', ', $cat_links);
+                $output .= '</div>';
             }
-            $permalink = get_permalink();
-            echo '<li><a href="' . esc_url($permalink) . '"><strong>' . get_the_title() . '</strong></a>' . $cat_links;
-            if (!$hide_price) echo ' (' . esc_html($price) . ')';
-            echo '<br />' . get_the_excerpt() . '</li>';
-        endwhile;
-        echo '</ul>';
-    }
-    wp_reset_postdata();
-    return ob_get_clean();
-}
-add_shortcode('wpcl_courses', 'wpcl_courses_shortcode');
-
-// [wpcl_course_listing_by_category] shortcode: Show all courses grouped by category
-function wpcl_courses_by_category_shortcode($atts) {
-    $atts = shortcode_atts(array(
-        'show_empty' => false,
-    ), $atts, 'wpcl_course_listing_by_category');
-
-    $terms = get_terms(array(
-        'taxonomy' => 'course_category',
-        'hide_empty' => !$atts['show_empty'],
-    ));
-    if (empty($terms) || is_wp_error($terms)) return '<p>No course categories found.</p>';
-
-    $hide_price = get_option('wpcl_disable_price', 0);
-    ob_start();
-    // No author/creator/editor output in category listing
-    echo '<div class="wpcl-courses-by-category">';
-    foreach ($terms as $term) {
-        echo '<section class="wpcl-category-section" style="margin-bottom:2.5em;">';
-        echo '<h2 class="wpcl-category-title" style="font-size:1.2em;margin-bottom:0.5em;">' . esc_html($term->name) . '</h2>';
-        $query = new WP_Query(array(
-            'post_type' => 'course',
-            'posts_per_page' => -1,
-            'tax_query' => array(array(
-                'taxonomy' => 'course_category',
-                'field' => 'term_id',
-                'terms' => $term->term_id,
-            )),
-        ));
-        if ($query->have_posts()) {
-            echo '<div class="wpcl-courses-thumbnails">';
-            while ($query->have_posts()) : $query->the_post();
-                $price = get_post_meta(get_the_ID(), '_wpcl_course_price', true);
-                $permalink = get_permalink();
-                echo '<div class="wpcl-course-thumb">';
-                if (has_post_thumbnail()) {
-                    $thumb_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
-                    echo '<a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">';
-                    echo '<img src="' . esc_url($thumb_url) . '" alt="' . esc_attr(get_the_title()) . '" class="wpcl-thumb-img" />';
-                    echo '</a>';
-                }
-                echo '<h3><a href="' . esc_url($permalink) . '" class="wpcl-thumb-link">' . get_the_title() . '</a></h3>';
-                echo '<div>' . get_the_excerpt() . '</div>';
-                if (!$hide_price) echo '<div><strong>Price:</strong> ' . esc_html($price) . '</div>';
-                echo '</div>';
-            endwhile;
-            echo '</div>';
-        } else {
-            echo '<p>No courses in this category.</p>';
+            $output .= '</div>';
         }
+        $output .= '</div>';
         wp_reset_postdata();
-        echo '</section>';
+    } else {
+        $output = '<p>No courses found.</p>';
     }
-    echo '</div>';
-    return ob_get_clean();
+    return $output;
 }
-add_shortcode('wpcl_course_listing_by_category', 'wpcl_courses_by_category_shortcode');
+add_shortcode('course_listings', 'wcl_course_listing_shortcode');
 
-// Add basic styles
-function wpcl_courses_styles() {
-	echo '<style>
-	.wpcl-courses-table { width:100%; border-collapse:collapse; background:#fff; box-shadow:none; border:1px solid #e0e0e0; }
-	.wpcl-courses-table th, .wpcl-courses-table td { border:1px solid #e0e0e0; padding:8px 10px; background:#fff; font-weight:400; }
-	.wpcl-courses-table th { background:#f7f7f7; font-weight:600; }
-	.wpcl-courses-table-title { font-size:1.3em; font-weight:600; margin-bottom:10px; }
-	.wpcl-courses-thumbnails { margin-top:20px; display:flex; flex-wrap:wrap; gap:20px; }
-	.wpcl-course-thumb { background:#fafafa; width:200px; border:1px solid #ccc; padding:10px; text-align:center; transition: box-shadow 0.3s, transform 0.3s; position:relative; }
-	.wpcl-course-thumb:hover { box-shadow:0 4px 16px rgba(0,0,0,0.15); transform:translateY(-4px) scale(1.03); z-index:2; }
-	.wpcl-thumb-link { text-decoration:none; color:inherit; }
-	.wpcl-thumb-img { max-width:100%; height:auto; border-radius:6px; transition: box-shadow 0.3s; }
-	.wpcl-course-thumb:hover .wpcl-thumb-img { box-shadow:0 2px 12px rgba(0,0,0,0.18); }
-	.wpcl-courses-bullet { margin-left:20px; }
-	</style>';
+// Optional: Add a rewrite rule for /courses/ to show the listing page
+function wcl_add_courses_rewrite_rule() {
+    add_rewrite_rule('^courses/?$', 'index.php?post_type=course', 'top');
 }
-add_action('wp_head', 'wpcl_courses_styles');
+add_action('init', 'wcl_add_courses_rewrite_rule');
 
-// Add category to course permalinks
-add_filter('post_type_link', function($post_link, $post) {
-    if ($post->post_type === 'course') {
-        $terms = get_the_terms($post->ID, 'course_category');
-        if ($terms && !is_wp_error($terms)) {
-            $category = array_shift($terms);
-            if ($category) {
-                $post_link = str_replace('course/', 'course/' . $category->slug . '/', $post_link);
-            }
+// Optional: Create a page on plugin activation
+function wcl_create_course_listing_page() {
+    if (!get_page_by_path('courses')) {
+        wp_insert_post(array(
+            'post_title' => 'Courses',
+            'post_name' => 'courses',
+            'post_content' => '[course_listings]',
+            'post_status' => 'publish',
+            'post_type' => 'page',
+        ));
+    }
+}
+register_activation_hook(__FILE__, 'wcl_create_course_listing_page');
+
+// Flush rewrite rules on activation/deactivation
+function wcl_flush_rewrite_rules() {
+    wcl_register_course_post_type();
+    wcl_register_course_category_taxonomy();
+    flush_rewrite_rules();
+}
+register_activation_hook(__FILE__, 'wcl_flush_rewrite_rules');
+register_deactivation_hook(__FILE__, 'flush_rewrite_rules');
+/**
+ * Add meta box for Course meta data.
+ */
+function wcl_add_course_meta_box() {
+    add_meta_box(
+        'wcl_course_meta',
+        'Course Details',
+        'wcl_course_meta_box_callback',
+        'course',
+        'normal',
+        'default'
+    );
+}
+add_action('add_meta_boxes', 'wcl_add_course_meta_box');
+
+/**
+ * Meta box display callback.
+ */
+function wcl_course_meta_box_callback($post) {
+    wp_nonce_field('wcl_save_course_meta', 'wcl_course_meta_nonce');
+    $instructor = get_post_meta($post->ID, '_wcl_instructor', true);
+    $duration = get_post_meta($post->ID, '_wcl_duration', true);
+    $level = get_post_meta($post->ID, '_wcl_level', true);
+    ?>
+    <p>
+        <label for="wcl_instructor"><strong>Instructor:</strong></label><br>
+        <input type="text" name="wcl_instructor" id="wcl_instructor" value="<?php echo esc_attr($instructor); ?>" style="width:100%;" />
+    </p>
+    <p>
+        <label for="wcl_duration"><strong>Duration:</strong></label><br>
+        <input type="text" name="wcl_duration" id="wcl_duration" value="<?php echo esc_attr($duration); ?>" style="width:100%;" />
+    </p>
+    <p>
+        <label for="wcl_level"><strong>Level:</strong></label><br>
+        <input type="text" name="wcl_level" id="wcl_level" value="<?php echo esc_attr($level); ?>" style="width:100%;" />
+    </p>
+    <?php
+}
+
+/**
+ * Save meta box content.
+ */
+function wcl_save_course_meta($post_id) {
+    if (!isset($_POST['wcl_course_meta_nonce']) || !wp_verify_nonce($_POST['wcl_course_meta_nonce'], 'wcl_save_course_meta')) {
+        return;
+    }
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+    if (isset($_POST['post_type']) && 'course' === $_POST['post_type']) {
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
         }
     }
-    return $post_link;
+
+    $fields = array(
+        '_wcl_instructor' => isset($_POST['wcl_instructor']) ? sanitize_text_field($_POST['wcl_instructor']) : '',
+        '_wcl_duration'   => isset($_POST['wcl_duration']) ? sanitize_text_field($_POST['wcl_duration']) : '',
+        '_wcl_level'      => isset($_POST['wcl_level']) ? sanitize_text_field($_POST['wcl_level']) : '',
+    );
+
+    foreach ($fields as $key => $value) {
+        update_post_meta($post_id, $key, $value);
+    }
+}
+add_action('save_post', 'wcl_save_course_meta');
+
+/**
+ * Display course meta data in the course listing shortcode.
+ */
+add_filter('wcl_course_listing_meta', function($output, $post_id) {
+    $instructor = get_post_meta($post_id, '_wcl_instructor', true);
+    $duration = get_post_meta($post_id, '_wcl_duration', true);
+    $level = get_post_meta($post_id, '_wcl_level', true);
+
+    $meta = '';
+    if ($instructor) {
+        $meta .= '<div class="wcl-course-instructor"><strong>Instructor:</strong> ' . esc_html($instructor) . '</div>';
+    }
+    if ($duration) {
+        $meta .= '<div class="wcl-course-duration"><strong>Duration:</strong> ' . esc_html($duration) . '</div>';
+    }
+    if ($level) {
+        $meta .= '<div class="wcl-course-level"><strong>Level:</strong> ' . esc_html($level) . '</div>';
+    }
+    return $output . $meta;
 }, 10, 2);
 
-// Add rewrite rule for course permalinks with category
-add_action('init', function() {
-    add_rewrite_rule('^course/([^/]+)/([^/]+)/?$', 'index.php?course=$matches[2]', 'top');
-});
+// Update the shortcode output to include meta data
+add_filter('wcl_course_listing_output', function($output, $post_id) {
+    $meta = apply_filters('wcl_course_listing_meta', '', $post_id);
+    return $output . $meta;
+}, 10, 2);
 
-// Admin setting: Disable showing price on courses
-add_action('admin_menu', function() {
-    add_options_page('WPCL Settings', 'WPCL Settings', 'manage_options', 'wpcl-settings', 'wpcl_settings_page');
+// Modify the shortcode to use the filter for meta data
+add_filter('the_content', function($content) {
+    global $post;
+    if ($post && $post->post_type === 'course' && is_singular('course')) {
+        $meta = apply_filters('wcl_course_listing_meta', '', $post->ID);
+        return $content . $meta;
+    }
+    return $content;
 });
+/**
+ * Add SEO meta box for Course posts.
+ */
+function wcl_add_seo_meta_box() {
+    add_meta_box(
+        'wcl_seo_meta',
+        'SEO Metadata',
+        'wcl_seo_meta_box_callback',
+        'course',
+        'normal',
+        'default'
+    );
+}
+add_action('add_meta_boxes', 'wcl_add_seo_meta_box');
 
-// Admin setting: Custom table title and placement
-add_action('admin_menu', function() {
-    add_options_page('WPCL Settings', 'WPCL Settings', 'manage_options', 'wpcl-settings', 'wpcl_settings_page');
-});
+/**
+ * SEO meta box display callback.
+ */
+function wcl_seo_meta_box_callback($post) {
+    wp_nonce_field('wcl_save_seo_meta', 'wcl_seo_meta_nonce');
+    $seo_title = get_post_meta($post->ID, '_wcl_seo_title', true);
+    $seo_description = get_post_meta($post->ID, '_wcl_seo_description', true);
+    ?>
+    <p>
+        <label for="wcl_seo_title"><strong>SEO Title:</strong></label><br>
+        <input type="text" name="wcl_seo_title" id="wcl_seo_title" value="<?php echo esc_attr($seo_title); ?>" style="width:100%;" maxlength="60" />
+        <small>Recommended: 50-60 characters.</small>
+    </p>
+    <p>
+        <label for="wcl_seo_description"><strong>SEO Description:</strong></label><br>
+        <textarea name="wcl_seo_description" id="wcl_seo_description" style="width:100%;" rows="3" maxlength="160"><?php echo esc_textarea($seo_description); ?></textarea>
+        <small>Recommended: 120-160 characters.</small>
+    </p>
+    <?php
+}
 
-function wpcl_settings_page() {
-    $title_text = get_option('wpcl_table_title_text', 'Course Listings');
-    $title_placement = get_option('wpcl_table_title_placement', 'above');
+/**
+ * Save SEO meta box content.
+ */
+function wcl_save_seo_meta($post_id) {
+    if (!isset($_POST['wcl_seo_meta_nonce']) || !wp_verify_nonce($_POST['wcl_seo_meta_nonce'], 'wcl_save_seo_meta')) {
+        return;
+    }
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+    if (isset($_POST['post_type']) && 'course' === $_POST['post_type']) {
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+    }
+
+    $seo_title = isset($_POST['wcl_seo_title']) ? sanitize_text_field($_POST['wcl_seo_title']) : '';
+    $seo_description = isset($_POST['wcl_seo_description']) ? sanitize_textarea_field($_POST['wcl_seo_description']) : '';
+
+    update_post_meta($post_id, '_wcl_seo_title', $seo_title);
+    update_post_meta($post_id, '_wcl_seo_description', $seo_description);
+}
+add_action('save_post', 'wcl_save_seo_meta');
+
+/**
+ * Output SEO meta tags in the head for single course posts.
+ */
+function wcl_output_seo_meta_tags() {
+    if (is_singular('course')) {
+        global $post;
+        $seo_title = get_post_meta($post->ID, '_wcl_seo_title', true);
+        $seo_description = get_post_meta($post->ID, '_wcl_seo_description', true);
+
+        if ($seo_title) {
+            echo '<meta name="title" content="' . esc_attr($seo_title) . '">' . "\n";
+            echo '<title>' . esc_html($seo_title) . '</title>' . "\n";
+        }
+        if ($seo_description) {
+            echo '<meta name="description" content="' . esc_attr($seo_description) . '">' . "\n";
+        }
+    }
+}
+add_action('wp_head', 'wcl_output_seo_meta_tags');
+
+/**
+ * Add Social Media meta box for Course posts.
+ */
+function wcl_add_social_meta_box() {
+    add_meta_box(
+        'wcl_social_meta',
+        'Social Media Metadata',
+        'wcl_social_meta_box_callback',
+        'course',
+        'normal',
+        'default'
+    );
+}
+add_action('add_meta_boxes', 'wcl_add_social_meta_box');
+
+/**
+ * Social Media meta box display callback.
+ */
+function wcl_social_meta_box_callback($post) {
+    wp_nonce_field('wcl_save_social_meta', 'wcl_social_meta_nonce');
+    $og_title = get_post_meta($post->ID, '_wcl_og_title', true);
+    $og_description = get_post_meta($post->ID, '_wcl_og_description', true);
+    $og_image = get_post_meta($post->ID, '_wcl_og_image', true);
+    ?>
+    <p>
+        <label for="wcl_og_title"><strong>Open Graph Title:</strong></label><br>
+        <input type="text" name="wcl_og_title" id="wcl_og_title" value="<?php echo esc_attr($og_title); ?>" style="width:100%;" maxlength="60" />
+        <small>Recommended: 50-60 characters.</small>
+    </p>
+    <p>
+        <label for="wcl_og_description"><strong>Open Graph Description:</strong></label><br>
+        <textarea name="wcl_og_description" id="wcl_og_description" style="width:100%;" rows="3" maxlength="160"><?php echo esc_textarea($og_description); ?></textarea>
+        <small>Recommended: 120-160 characters.</small>
+    </p>
+    <p>
+        <label for="wcl_og_image"><strong>Open Graph Image URL:</strong></label><br>
+        <input type="text" name="wcl_og_image" id="wcl_og_image" value="<?php echo esc_url($og_image); ?>" style="width:100%;" />
+        <small>Recommended size: 1200x630px. You can paste a URL or use the "Add Media" button.</small>
+    </p>
+    <p>
+        <button type="button" class="button" id="wcl_og_image_upload">Add Media</button>
+    </p>
+    <script>
+    jQuery(document).ready(function($){
+        $('#wcl_og_image_upload').on('click', function(e){
+            e.preventDefault();
+            var image_frame;
+            if(image_frame){
+                image_frame.open();
+            }
+            // Define image_frame as wp.media object
+            image_frame = wp.media({
+                title: 'Select Media',
+                multiple : false,
+                library : {
+                    type : 'image',
+                }
+            });
+
+            image_frame.on('select', function(){
+                var attachment = image_frame.state().get('selection').first().toJSON();
+                $('#wcl_og_image').val(attachment.url);
+            });
+            image_frame.open();
+        });
+    });
+    </script>
+    <?php
+}
+
+/**
+ * Save Social Media meta box content.
+ */
+function wcl_save_social_meta($post_id) {
+    if (!isset($_POST['wcl_social_meta_nonce']) || !wp_verify_nonce($_POST['wcl_social_meta_nonce'], 'wcl_save_social_meta')) {
+        return;
+    }
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+        return;
+    }
+    if (isset($_POST['post_type']) && 'course' === $_POST['post_type']) {
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+    }
+
+    $og_title = isset($_POST['wcl_og_title']) ? sanitize_text_field($_POST['wcl_og_title']) : '';
+    $og_description = isset($_POST['wcl_og_description']) ? sanitize_textarea_field($_POST['wcl_og_description']) : '';
+    $og_image = isset($_POST['wcl_og_image']) ? esc_url_raw($_POST['wcl_og_image']) : '';
+
+    update_post_meta($post_id, '_wcl_og_title', $og_title);
+    update_post_meta($post_id, '_wcl_og_description', $og_description);
+    update_post_meta($post_id, '_wcl_og_image', $og_image);
+}
+add_action('save_post', 'wcl_save_social_meta');
+
+/**
+ * Output Social Media meta tags in the head for single course posts.
+ */
+function wcl_output_social_meta_tags() {
+    if (is_singular('course')) {
+        global $post;
+        $og_title = get_post_meta($post->ID, '_wcl_og_title', true);
+        $og_description = get_post_meta($post->ID, '_wcl_og_description', true);
+        $og_image = get_post_meta($post->ID, '_wcl_og_image', true);
+
+        if ($og_title) {
+            echo '<meta property="og:title" content="' . esc_attr($og_title) . '">' . "\n";
+            echo '<meta name="twitter:title" content="' . esc_attr($og_title) . '">' . "\n";
+        }
+        if ($og_description) {
+            echo '<meta property="og:description" content="' . esc_attr($og_description) . '">' . "\n";
+            echo '<meta name="twitter:description" content="' . esc_attr($og_description) . '">' . "\n";
+        }
+        if ($og_image) {
+            echo '<meta property="og:image" content="' . esc_url($og_image) . '">' . "\n";
+            echo '<meta name="twitter:image" content="' . esc_url($og_image) . '">' . "\n";
+        }
+        echo '<meta property="og:type" content="article">' . "\n";
+        echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+    }
+}
+add_action('wp_head', 'wcl_output_social_meta_tags');
+
+/**
+ * Add settings page for WP Course Listings.
+ */
+function wcl_add_settings_page() {
+    add_options_page(
+        'WP Course Listings Settings',
+        'Course Listings',
+        'manage_options',
+        'wcl-settings',
+        'wcl_render_settings_page'
+    );
+}
+add_action('admin_menu', 'wcl_add_settings_page');
+
+/**
+ * Register settings.
+ */
+function wcl_register_settings() {
+    register_setting('wcl_settings_group', 'wcl_courses_slug', array(
+        'type' => 'string',
+        'sanitize_callback' => 'sanitize_title',
+        'default' => 'courses',
+    ));
+    add_settings_section(
+        'wcl_settings_section',
+        'Course Listings Settings',
+        '__return_false',
+        'wcl-settings'
+    );
+    add_settings_field(
+        'wcl_courses_slug',
+        'Courses URL Slug (Plural)',
+        'wcl_courses_slug_field_callback',
+        'wcl-settings',
+        'wcl_settings_section'
+    );
+}
+add_action('admin_init', 'wcl_register_settings');
+
+/**
+ * Slug field callback.
+ */
+function wcl_courses_slug_field_callback() {
+    $slug = get_option('wcl_courses_slug', 'courses');
+    echo '<input type="text" name="wcl_courses_slug" value="' . esc_attr($slug) . '" class="regular-text" />';
+    echo '<p class="description">This will be used for the plural URL, e.g., <code>/' . esc_html($slug) . '/</code></p>';
+}
+
+/**
+ * Render settings page.
+ */
+function wcl_render_settings_page() {
     ?>
     <div class="wrap">
         <h1>WP Course Listings Settings</h1>
         <form method="post" action="options.php">
-            <?php settings_fields('wpcl_settings_group'); do_settings_sections('wpcl_settings_group'); ?>
-            <table class="form-table">
-                <tr valign="top">
-                    <th scope="row">Disable Price Display</th>
-                    <td><input type="checkbox" name="wpcl_disable_price" value="1" <?php checked(1, get_option('wpcl_disable_price', 0)); ?> /> Hide price on all course listings</td>
-                </tr>
-                <tr valign="top">
-                    <th scope="row">Table Title Text</th>
-                    <td><input type="text" name="wpcl_table_title_text" value="<?php echo esc_attr($title_text); ?>" style="width: 300px;" />
-                    <p class="description">Custom title for course tables. Default: "Course Listings"</p></td>
-                </tr>
-                <tr valign="top">
-                    <th scope="row">Table Title Placement</th>
-                    <td>
-                        <select name="wpcl_table_title_placement">
-                            <option value="above" <?php selected($title_placement, 'above'); ?>>Above Table</option>
-                            <option value="below" <?php selected($title_placement, 'below'); ?>>Below Table</option>
-                            <option value="none" <?php selected($title_placement, 'none'); ?>>Do Not Show</option>
-                        </select>
-                        <p class="description">Where to display the table title.</p>
-                    </td>
-                </tr>
-            </table>
-            <?php submit_button(); ?>
+            <?php
+            settings_fields('wcl_settings_group');
+            do_settings_sections('wcl-settings');
+            submit_button();
+            ?>
         </form>
+        <p><strong>Note:</strong> After changing the slug, you must <a href="<?php echo esc_url(admin_url('options-permalink.php')); ?>">save your permalinks</a> for changes to take effect.</p>
     </div>
     <?php
 }
-add_action('admin_init', function() {
-    register_setting('wpcl_settings_group', 'wpcl_disable_price');
-    register_setting('wpcl_settings_group', 'wpcl_table_title_text');
-    register_setting('wpcl_settings_group', 'wpcl_table_title_placement');
-});
 
-// Add meta box for SEO and structured data metadata
-function wpcl_add_seo_meta_box() {
-    add_meta_box('wpcl_seo_meta', 'SEO & Structured Data', 'wpcl_seo_meta_box_callback', 'course', 'normal', 'default');
+/**
+ * Use the custom slug for the course post type and rewrite rules.
+ */
+function wcl_dynamic_course_slug($args, $post_type) {
+    if ($post_type === 'course') {
+        $slug = get_option('wcl_courses_slug', 'courses');
+        $args['rewrite'] = array('slug' => $slug);
+        $args['has_archive'] = $slug;
+    }
+    return $args;
 }
-add_action('add_meta_boxes', 'wpcl_add_seo_meta_box');
+add_filter('register_post_type_args', 'wcl_dynamic_course_slug', 10, 2);
 
-function wpcl_seo_meta_box_callback($post) {
-    $meta = get_post_meta($post->ID);
-    $fields = array(
-        // Core
-        'meta_title' => 'Meta Title',
-        'meta_description' => 'Meta Description',
-        'meta_keywords' => 'Meta Keywords',
-        // Open Graph
-        'og_title' => 'OG Title',
-        'og_description' => 'OG Description',
-        'og_type' => 'OG Type',
-        'og_image' => 'OG Image URL',
-        // Twitter Card
-        'twitter_title' => 'Twitter Title',
-        'twitter_description' => 'Twitter Description',
-        'twitter_image' => 'Twitter Image URL',
-        'twitter_card' => 'Twitter Card Type',
-        // Schema.org
-        'schema_type' => 'Schema.org Type',
-        'schema_json' => 'Custom JSON-LD (overrides auto)',
-        // Rare/other
-        'robots' => 'Robots',
-        'canonical' => 'Canonical URL',
-        'author' => 'Meta Author',
-        'publisher' => 'Meta Publisher',
-        'copyright' => 'Meta Copyright',
-    );
-    echo '<table class="form-table">';
-    foreach ($fields as $key => $label) {
-        $val = isset($meta[$key][0]) ? esc_attr($meta[$key][0]) : '';
-        $type = ($key === 'meta_description' || $key === 'og_description' || $key === 'twitter_description' || $key === 'schema_json') ? 'textarea' : 'text';
-        echo '<tr><th><label for="wpcl_' . $key . '">' . esc_html($label) . '</label></th><td>';
-        if ($type === 'textarea') {
-            echo '<textarea id="wpcl_' . $key . '" name="wpcl_' . $key . '" rows="2" style="width:100%">' . esc_textarea($val) . '</textarea>';
-        } else {
-            echo '<input type="text" id="wpcl_' . $key . '" name="wpcl_' . $key . '" value="' . $val . '" style="width:100%" />';
-        }
-        echo '</td></tr>';
-    }
-    echo '</table>';
-    echo '<p class="description">Leave blank to omit. Custom JSON-LD will override auto schema if provided.</p>';
+/**
+ * Add rewrite rule for the custom slug.
+ */
+function wcl_dynamic_courses_rewrite_rule() {
+    $slug = get_option('wcl_courses_slug', 'courses');
+    add_rewrite_rule('^' . $slug . '/?$', 'index.php?post_type=course', 'top');
 }
+add_action('init', 'wcl_dynamic_courses_rewrite_rule', 20);
 
-// Save all SEO/meta fields
-add_action('save_post_course', function($post_id) {
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-    $fields = array(
-        'meta_title','meta_description','meta_keywords','og_title','og_description','og_type','og_image',
-        'twitter_title','twitter_description','twitter_image','twitter_card','schema_type','schema_json',
-        'robots','canonical','author','publisher','copyright'
-    );
-    foreach ($fields as $key) {
-        if (isset($_POST['wpcl_' . $key])) {
-            update_post_meta($post_id, $key, sanitize_text_field($_POST['wpcl_' . $key]));
-        } else {
-            delete_post_meta($post_id, $key);
-        }
+/**
+ * Flush rewrite rules when the slug changes.
+ */
+function wcl_maybe_flush_rewrite_rules() {
+    if (!is_admin()) {
+        return;
     }
-});
-
-// Output meta tags in head for course posts
-add_action('wp_head', function() {
-    if (!is_singular('course')) return;
-    global $post;
-    $meta = get_post_meta($post->ID);
-    // Core
-    if (!empty($meta['meta_title'][0])) echo '<title>' . esc_html($meta['meta_title'][0]) . '</title>' . "\n";
-    if (!empty($meta['meta_description'][0])) echo '<meta name="description" content="' . esc_attr($meta['meta_description'][0]) . '" />' . "\n";
-    if (!empty($meta['meta_keywords'][0])) echo '<meta name="keywords" content="' . esc_attr($meta['meta_keywords'][0]) . '" />' . "\n";
-    if (!empty($meta['robots'][0])) echo '<meta name="robots" content="' . esc_attr($meta['robots'][0]) . '" />' . "\n";
-    if (!empty($meta['canonical'][0])) echo '<link rel="canonical" href="' . esc_url($meta['canonical'][0]) . '" />' . "\n";
-    if (!empty($meta['author'][0])) echo '<meta name="author" content="' . esc_attr($meta['author'][0]) . '" />' . "\n";
-    if (!empty($meta['publisher'][0])) echo '<meta name="publisher" content="' . esc_attr($meta['publisher'][0]) . '" />' . "\n";
-    if (!empty($meta['copyright'][0])) echo '<meta name="copyright" content="' . esc_attr($meta['copyright'][0]) . '" />' . "\n";
-    // Open Graph
-    if (!empty($meta['og_title'][0])) echo '<meta property="og:title" content="' . esc_attr($meta['og_title'][0]) . '" />' . "\n";
-    if (!empty($meta['og_description'][0])) echo '<meta property="og:description" content="' . esc_attr($meta['og_description'][0]) . '" />' . "\n";
-    if (!empty($meta['og_type'][0])) echo '<meta property="og:type" content="' . esc_attr($meta['og_type'][0]) . '" />' . "\n";
-    if (!empty($meta['og_image'][0])) echo '<meta property="og:image" content="' . esc_url($meta['og_image'][0]) . '" />' . "\n";
-    // Twitter
-    if (!empty($meta['twitter_title'][0])) echo '<meta name="twitter:title" content="' . esc_attr($meta['twitter_title'][0]) . '" />' . "\n";
-    if (!empty($meta['twitter_description'][0])) echo '<meta name="twitter:description" content="' . esc_attr($meta['twitter_description'][0]) . '" />' . "\n";
-    if (!empty($meta['twitter_image'][0])) echo '<meta name="twitter:image" content="' . esc_url($meta['twitter_image'][0]) . '" />' . "\n";
-    if (!empty($meta['twitter_card'][0])) echo '<meta name="twitter:card" content="' . esc_attr($meta['twitter_card'][0]) . '" />' . "\n";
-    // Schema.org/JSON-LD
-    if (!empty($meta['schema_json'][0])) {
-        echo '<script type="application/ld+json">' . $meta['schema_json'][0] . '</script>' . "\n";
-    } elseif (!empty($meta['schema_type'][0])) {
-        $schema = array(
-            '@context' => 'https://schema.org',
-            '@type' => esc_attr($meta['schema_type'][0]),
-            'name' => get_the_title($post),
-            'description' => get_the_excerpt($post),
-            'url' => get_permalink($post),
-        );
-        echo '<script type="application/ld+json">' . wp_json_encode($schema) . '</script>' . "\n";
+    $old_slug = get_option('wcl_courses_slug_flushed', '');
+    $current_slug = get_option('wcl_courses_slug', 'courses');
+    if ($old_slug !== $current_slug) {
+        flush_rewrite_rules();
+        update_option('wcl_courses_slug_flushed', $current_slug);
     }
-});
+}
+add_action('admin_init', 'wcl_maybe_flush_rewrite_rules');
