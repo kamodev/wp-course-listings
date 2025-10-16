@@ -127,6 +127,7 @@ function wcl_flush_rewrite_rules() {
 }
 register_activation_hook(__FILE__, 'wcl_flush_rewrite_rules');
 register_deactivation_hook(__FILE__, 'flush_rewrite_rules');
+
 /**
  * Add meta box for Course meta data.
  */
@@ -147,14 +148,9 @@ add_action('add_meta_boxes', 'wcl_add_course_meta_box');
  */
 function wcl_course_meta_box_callback($post) {
     wp_nonce_field('wcl_save_course_meta', 'wcl_course_meta_nonce');
-    $instructor = get_post_meta($post->ID, '_wcl_instructor', true);
     $duration = get_post_meta($post->ID, '_wcl_duration', true);
     $level = get_post_meta($post->ID, '_wcl_level', true);
     ?>
-    <p>
-        <label for="wcl_instructor"><strong>Instructor:</strong></label><br>
-        <input type="text" name="wcl_instructor" id="wcl_instructor" value="<?php echo esc_attr($instructor); ?>" style="width:100%;" />
-    </p>
     <p>
         <label for="wcl_duration"><strong>Duration:</strong></label><br>
         <input type="text" name="wcl_duration" id="wcl_duration" value="<?php echo esc_attr($duration); ?>" style="width:100%;" />
@@ -183,7 +179,6 @@ function wcl_save_course_meta($post_id) {
     }
 
     $fields = array(
-        '_wcl_instructor' => isset($_POST['wcl_instructor']) ? sanitize_text_field($_POST['wcl_instructor']) : '',
         '_wcl_duration'   => isset($_POST['wcl_duration']) ? sanitize_text_field($_POST['wcl_duration']) : '',
         '_wcl_level'      => isset($_POST['wcl_level']) ? sanitize_text_field($_POST['wcl_level']) : '',
     );
@@ -198,14 +193,10 @@ add_action('save_post', 'wcl_save_course_meta');
  * Display course meta data in the course listing shortcode.
  */
 add_filter('wcl_course_listing_meta', function($output, $post_id) {
-    $instructor = get_post_meta($post_id, '_wcl_instructor', true);
     $duration = get_post_meta($post_id, '_wcl_duration', true);
     $level = get_post_meta($post_id, '_wcl_level', true);
 
     $meta = '';
-    if ($instructor) {
-        $meta .= '<div class="wcl-course-instructor"><strong>Instructor:</strong> ' . esc_html($instructor) . '</div>';
-    }
     if ($duration) {
         $meta .= '<div class="wcl-course-duration"><strong>Duration:</strong> ' . esc_html($duration) . '</div>';
     }
