@@ -1,0 +1,65 @@
+/**
+ * WP Course Listings admin styles.
+ */
+
+/* Course edit screen */
+.wcl-program-select {
+	width: 100%;
+	max-width: 400px;
+}
+
+.wcl-program-order {
+	width: 100px;
+}
+
+/* Settings page */
+.wcl-settings-wrapper {
+	display: flex;
+	gap: 20px;
+}
+
+.wcl-settings-main {
+	flex: 2;
+}
+
+.wcl-settings-sidebar {
+	flex: 1;
+}
+
+.wcl-settings-wrapper .postbox {
+	margin-bottom: 20px;
+}
+
+.wcl-settings-wrapper .postbox .hndle {
+	padding: 8px 12px;
+	margin: 0;
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.wcl-settings-wrapper .inside {
+	padding: 6px 12px 12px;
+}
+
+.wcl-settings-wrapper .inside p {
+	margin: 6px 0;
+}
+
+.wcl-settings-wrapper .inside hr {
+	margin: 15px 0;
+	border: none;
+	border-top: 1px solid #ddd;
+}
+
+.wcl-settings-wrapper code {
+	background: #f1f1f1;
+	padding: 2px 4px;
+	border-radius: 3px;
+	font-size: 12px;
+}
+
+@media screen and (max-width: 782px) {
+	.wcl-settings-wrapper {
+		flex-direction: column;
+	}
+}
