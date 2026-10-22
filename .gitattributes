@@ -1,0 +1,6 @@
+# Development files excluded from the distributable zip built with `git archive`.
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/Makefile export-ignore
+/README.md export-ignore
