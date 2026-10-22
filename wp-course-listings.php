@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP Course Listings
 Description: A comprehensive course management plugin with customizable URLs, display settings, SEO features, course programs with ordering, and advanced course listing capabilities.
-Version: 2.2.0
+Version: 0.5.1
 Author: Jeremiah Bagula
 */
 
@@ -1062,7 +1062,7 @@ function wcl_render_settings_page() {
                 <div class="postbox">
                     <h3 class="hndle"><span>Plugin Info</span></h3>
                     <div class="inside">
-                        <p><strong>Version:</strong> 2.2.0</p>
+                        <p><strong>Version:</strong> 0.5.1</p>
                         <p><strong>Active Courses:</strong> <?php echo wp_count_posts('course')->publish; ?></p>
                         <p><strong>Course Categories:</strong> <?php echo wp_count_terms('course_category'); ?></p>
                         <p><strong>Course Programs:</strong> <?php echo wp_count_terms('course_program'); ?></p>
