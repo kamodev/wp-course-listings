@@ -1,0 +1,144 @@
+/**
+ * WP Course Listings front-end styles.
+ */
+
+/* Course listings */
+.wcl-course-listings {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 20px;
+	margin: 20px 0;
+}
+.wcl-course {
+	border: 1px solid #ddd;
+	padding: 20px;
+	border-radius: 5px;
+	background: #fff;
+}
+.wcl-course-thumb {
+	margin-bottom: 15px;
+}
+.wcl-course-thumb img {
+	width: 100%;
+	height: auto;
+	border-radius: 3px;
+}
+.wcl-course-title {
+	margin: 0 0 10px 0;
+	font-size: 1.2em;
+}
+.wcl-course-title a {
+	text-decoration: none;
+	color: #333;
+}
+.wcl-course-title a:hover {
+	color: #0073aa;
+}
+.wcl-course-excerpt {
+	margin-bottom: 10px;
+	color: #666;
+}
+.wcl-course-meta {
+	margin-bottom: 10px;
+	font-size: 0.9em;
+	color: #666;
+}
+.wcl-course-categories {
+	font-size: 0.9em;
+	color: #666;
+}
+.wcl-course-categories a {
+	color: #0073aa;
+	text-decoration: none;
+}
+.wcl-course-categories a:hover {
+	text-decoration: underline;
+}
+.wcl-course-programs {
+	font-size: 0.9em;
+	color: #666;
+	margin-bottom: 10px;
+}
+.wcl-course-programs a {
+	color: #8e44ad;
+	text-decoration: none;
+	font-weight: 500;
+}
+.wcl-course-programs a:hover {
+	text-decoration: underline;
+}
+.wcl-program-order {
+	color: #8e44ad;
+	font-weight: 600;
+	font-size: 0.85em;
+}
+/* Program-specific course listing styles */
+.wcl-course-listings.program-ordered .wcl-course {
+	position: relative;
+}
+.wcl-course-listings.program-ordered .wcl-course::before {
+	content: attr(data-program-order);
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	background: #8e44ad;
+	color: white;
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-weight: bold;
+}
+/* Program archive page styles */
+.tax-course_program .wcl-course-listings {
+	position: relative;
+}
+.tax-course_program .wcl-course-listings::before {
+	content: "Courses in Program Order";
+	display: block;
+	background: #f8f9fa;
+	padding: 10px 15px;
+	margin-bottom: 20px;
+	border-left: 4px solid #8e44ad;
+	font-weight: 600;
+	color: #333;
+}
+
+/* Hide post meta information on course posts */
+.course .entry-meta,
+.course .post-meta,
+.course .byline,
+.course .posted-on,
+.course .bypostauthor,
+.single-course .entry-meta,
+.single-course .post-meta,
+.single-course .byline,
+.single-course .posted-on,
+.single-course .bypostauthor,
+.post-type-archive-course .entry-meta,
+.post-type-archive-course .post-meta,
+.post-type-archive-course .byline,
+.post-type-archive-course .posted-on,
+.post-type-archive-course .bypostauthor,
+body.single-course .entry-header .entry-meta,
+body.single-course .entry-footer .entry-meta,
+body.post-type-archive-course .entry-header .entry-meta,
+body.post-type-archive-course .entry-footer .entry-meta {
+	display: none !important;
+}
+
+/* Hide author and date specific elements */
+.course .author,
+.course .published,
+.course .updated,
+.single-course .author,
+.single-course .published,
+.single-course .updated,
+.post-type-archive-course .author,
+.post-type-archive-course .published,
+.post-type-archive-course .updated {
+	display: none !important;
+}
