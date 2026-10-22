@@ -23,6 +23,7 @@ final class Admin {
 		add_action( 'save_post_course', array( $this, 'save_seo_meta' ) );
 		add_action( 'save_post_course', array( $this, 'save_social_meta' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_editor_assets' ) );
 
 		add_filter( 'manage_course_posts_columns', array( $this, 'list_columns' ) );
 		add_action( 'manage_course_posts_custom_column', array( $this, 'render_list_column' ), 10, 2 );
@@ -45,9 +46,34 @@ final class Admin {
 
 		if ( Options::get( 'wcl_enable_social_meta' ) ) {
 			wp_enqueue_media();
-			wp_enqueue_script( 'wp-course-listings-admin', plugin_dir_url( PLUGIN_FILE ) . 'admin/js/wp-course-listings-admin.js', array( 'jquery', 'wp-i18n' ), VERSION, true );
-			wp_set_script_translations( 'wp-course-listings-admin', 'wp-course-listings', PLUGIN_DIR . 'languages' );
 		}
+
+		wp_enqueue_script(
+			'wp-course-listings-admin',
+			plugin_dir_url( PLUGIN_FILE ) . 'admin/js/wp-course-listings-admin.js',
+			array( 'jquery', 'jquery-ui-autocomplete', 'wp-a11y', 'wp-api-fetch', 'wp-html-entities', 'wp-i18n', 'wp-url' ),
+			VERSION,
+			true
+		);
+		wp_set_script_translations( 'wp-course-listings-admin', 'wp-course-listings', PLUGIN_DIR . 'languages' );
+	}
+
+	/**
+	 * Hide the block editor's program panel; programs are set in Course Details.
+	 */
+	public function enqueue_block_editor_assets() {
+		$screen = get_current_screen();
+		if ( ! $screen || 'course' !== $screen->post_type ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'wp-course-listings-editor',
+			plugin_dir_url( PLUGIN_FILE ) . 'admin/js/wp-course-listings-editor.js',
+			array( 'wp-data', 'wp-dom-ready', 'wp-edit-post' ),
+			VERSION,
+			true
+		);
 	}
 
 	/**
@@ -68,45 +94,7 @@ final class Admin {
 	}
 
 	/**
-	 * Program picker shown in place of the default taxonomy box in the classic editor.
-	 *
-	 * @param \WP_Post $post Course being edited.
-	 * @param array    $box  Meta box arguments.
-	 */
-	public static function render_program_meta_box( $post, $box ) {
-		$taxonomy = $box['args']['taxonomy'];
-
-		$terms           = wp_get_object_terms( $post->ID, $taxonomy );
-		$current_program = ! empty( $terms ) && ! is_wp_error( $terms ) ? $terms[0]->term_id : 0;
-
-		$programs = get_terms(
-			array(
-				'taxonomy'   => $taxonomy,
-				'hide_empty' => false,
-				'orderby'    => 'name',
-				'order'      => 'ASC',
-			)
-		);
-		?>
-		<div id="taxonomy-<?php echo esc_attr( $taxonomy ); ?>" class="categorydiv">
-			<label for="<?php echo esc_attr( $taxonomy ); ?>-select"><strong><?php esc_html_e( 'Select Program:', 'wp-course-listings' ); ?></strong></label><br>
-			<select name="tax_input[<?php echo esc_attr( $taxonomy ); ?>][]" id="<?php echo esc_attr( $taxonomy ); ?>-select" class="wcl-program-select">
-				<option value=""><?php esc_html_e( 'No Program', 'wp-course-listings' ); ?></option>
-				<?php if ( ! empty( $programs ) && ! is_wp_error( $programs ) ) : ?>
-					<?php foreach ( $programs as $program ) : ?>
-						<option value="<?php echo esc_attr( $program->term_id ); ?>" <?php selected( $current_program, $program->term_id ); ?>>
-							<?php echo esc_html( $program->name ); ?>
-						</option>
-					<?php endforeach; ?>
-				<?php endif; ?>
-			</select>
-			<p class="description"><?php esc_html_e( 'Select the program this course belongs to.', 'wp-course-listings' ); ?></p>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Course Details meta box: duration, level and order within the program.
+	 * Course Details meta box: duration, level, program, order within the program and prerequisites.
 	 *
 	 * @param \WP_Post $post Course being edited.
 	 */
@@ -116,6 +104,14 @@ final class Admin {
 		$duration      = get_post_meta( $post->ID, '_wcl_duration', true );
 		$level         = get_post_meta( $post->ID, '_wcl_level', true );
 		$program_order = get_post_meta( $post->ID, '_wcl_program_order', true );
+		$program       = Course::get_program( $post->ID );
+
+		$prerequisites = array();
+		foreach ( Course::get_prerequisite_ids( $post->ID ) as $id ) {
+			if ( 'course' === get_post_type( $id ) ) {
+				$prerequisites[ $id ] = $this->course_label( $id );
+			}
+		}
 		?>
 		<p>
 			<label for="wcl_duration"><strong><?php esc_html_e( 'Duration:', 'wp-course-listings' ); ?></strong></label><br>
@@ -125,12 +121,99 @@ final class Admin {
 			<label for="wcl_level"><strong><?php esc_html_e( 'Level:', 'wp-course-listings' ); ?></strong></label><br>
 			<input type="text" name="wcl_level" id="wcl_level" value="<?php echo esc_attr( $level ); ?>" class="widefat" />
 		</p>
+		<div class="wcl-field">
+			<label for="wcl_program_search"><strong><?php esc_html_e( 'Program:', 'wp-course-listings' ); ?></strong></label>
+			<input type="hidden" name="wcl_program_submitted" value="1" />
+			<?php
+			$this->render_lookup(
+				array(
+					'id'          => 'wcl_program_search',
+					'name'        => 'wcl_program',
+					'source'      => 'program',
+					'multiple'    => false,
+					'items'       => $program ? array( $program->term_id => $program->name ) : array(),
+					'placeholder' => __( 'Search programs…', 'wp-course-listings' ),
+				)
+			);
+			?>
+			<p class="description"><?php esc_html_e( 'Optional. Start typing to find the program this course belongs to.', 'wp-course-listings' ); ?></p>
+		</div>
 		<p>
 			<label for="wcl_program_order"><strong><?php esc_html_e( 'Order in Program:', 'wp-course-listings' ); ?></strong></label><br>
 			<input type="number" name="wcl_program_order" id="wcl_program_order" value="<?php echo esc_attr( absint( $program_order ) ); ?>" min="0" step="1" class="wcl-program-order" />
 		</p>
 		<p class="description"><?php esc_html_e( 'Set the order of this course within its program (0 = first, higher numbers appear later).', 'wp-course-listings' ); ?></p>
+		<div class="wcl-field">
+			<label for="wcl_prerequisites_search"><strong><?php esc_html_e( 'Prerequisites:', 'wp-course-listings' ); ?></strong></label>
+			<input type="hidden" name="wcl_prerequisites_submitted" value="1" />
+			<?php
+			$this->render_lookup(
+				array(
+					'id'          => 'wcl_prerequisites_search',
+					'name'        => 'wcl_prerequisites[]',
+					'source'      => 'course',
+					'multiple'    => true,
+					'items'       => $prerequisites,
+					'exclude'     => $post->ID,
+					'placeholder' => __( 'Search courses…', 'wp-course-listings' ),
+				)
+			);
+			?>
+			<p class="description"><?php esc_html_e( 'Optional. Courses students should complete before this one.', 'wp-course-listings' ); ?></p>
+		</div>
 		<?php
+	}
+
+	/**
+	 * Render a type-ahead field. Selected items are kept as hidden inputs named $args['name'].
+	 *
+	 * @param array $args {
+	 *     Field arguments.
+	 *
+	 *     @type string $id          ID of the search input.
+	 *     @type string $name        Name of the hidden inputs holding selected IDs.
+	 *     @type string $source      What to search: 'course' or 'program'.
+	 *     @type bool   $multiple    Whether more than one item can be selected.
+	 *     @type array  $items       Selected items as ID => label.
+	 *     @type int    $exclude     ID to leave out of search results.
+	 *     @type string $placeholder Search input placeholder.
+	 * }
+	 */
+	private function render_lookup( $args ) {
+		$args = wp_parse_args( $args, array( 'exclude' => 0 ) );
+		?>
+		<div class="wcl-lookup" data-source="<?php echo esc_attr( $args['source'] ); ?>" data-name="<?php echo esc_attr( $args['name'] ); ?>" data-multiple="<?php echo $args['multiple'] ? '1' : '0'; ?>" data-exclude="<?php echo esc_attr( $args['exclude'] ); ?>">
+			<ul class="wcl-lookup-selected">
+				<?php foreach ( $args['items'] as $id => $label ) : ?>
+					<li class="wcl-lookup-item">
+						<span class="wcl-lookup-label"><?php echo esc_html( $label ); ?></span>
+						<?php /* translators: %s: name of the selected course or program. */ ?>
+						<button type="button" class="button-link wcl-lookup-remove" aria-label="<?php echo esc_attr( sprintf( __( 'Remove %s', 'wp-course-listings' ), $label ) ); ?>"><span aria-hidden="true">&times;</span></button>
+						<input type="hidden" name="<?php echo esc_attr( $args['name'] ); ?>" value="<?php echo esc_attr( $id ); ?>" />
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<input type="text" id="<?php echo esc_attr( $args['id'] ); ?>" class="wcl-lookup-input widefat" placeholder="<?php echo esc_attr( $args['placeholder'] ); ?>" autocomplete="off" />
+		</div>
+		<?php
+	}
+
+	/**
+	 * Label for a course in a type-ahead field, noting when it is not published.
+	 *
+	 * @param int $course_id Course ID.
+	 * @return string
+	 */
+	private function course_label( $course_id ) {
+		$label  = wp_strip_all_tags( get_the_title( $course_id ) );
+		$status = get_post_status_object( get_post_status( $course_id ) );
+
+		if ( $status && 'publish' !== $status->name ) {
+			/* translators: 1: course title, 2: post status such as Draft. */
+			$label = sprintf( __( '%1$s (%2$s)', 'wp-course-listings' ), $label, $status->label );
+		}
+
+		return $label;
 	}
 
 	/**
@@ -203,8 +286,63 @@ final class Admin {
 		update_post_meta( $post_id, '_wcl_duration', $this->posted_text( 'wcl_duration' ) );
 		update_post_meta( $post_id, '_wcl_level', $this->posted_text( 'wcl_level' ) );
 
-		if ( isset( $_POST['wcl_program_order'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in can_save().
-			update_post_meta( $post_id, '_wcl_program_order', absint( wp_unslash( $_POST['wcl_program_order'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in can_save().
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified in can_save().
+		if ( isset( $_POST['wcl_program_order'] ) ) {
+			update_post_meta( $post_id, '_wcl_program_order', absint( wp_unslash( $_POST['wcl_program_order'] ) ) );
+		}
+
+		if ( isset( $_POST['wcl_program_submitted'] ) ) {
+			$this->save_program( $post_id, isset( $_POST['wcl_program'] ) ? absint( wp_unslash( $_POST['wcl_program'] ) ) : 0 );
+		}
+
+		if ( isset( $_POST['wcl_prerequisites_submitted'] ) ) {
+			$ids = isset( $_POST['wcl_prerequisites'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['wcl_prerequisites'] ) ) : array();
+			$this->save_prerequisites( $post_id, $ids );
+		}
+		// phpcs:enable
+	}
+
+	/**
+	 * Assign the course to a program, or remove it from its program when $program_id is 0.
+	 *
+	 * Left alone when the program is unchanged, so extra programs added
+	 * through Quick Edit are not dropped.
+	 *
+	 * @param int $post_id    Course ID.
+	 * @param int $program_id Program term ID.
+	 */
+	private function save_program( $post_id, $program_id ) {
+		$current = Course::get_program( $post_id );
+		if ( ( $current ? $current->term_id : 0 ) === $program_id ) {
+			return;
+		}
+
+		$terms = $program_id && term_exists( $program_id, 'course_program' ) ? array( $program_id ) : array();
+		wp_set_object_terms( $post_id, $terms, 'course_program' );
+	}
+
+	/**
+	 * Store the course's prerequisites, ignoring anything that is not another course.
+	 *
+	 * @param int   $post_id Course ID.
+	 * @param int[] $ids     Prerequisite course IDs.
+	 */
+	private function save_prerequisites( $post_id, $ids ) {
+		$ids = array_values(
+			array_unique(
+				array_filter(
+					$ids,
+					static function ( $id ) use ( $post_id ) {
+						return $id && $id !== $post_id && 'course' === get_post_type( $id );
+					}
+				)
+			)
+		);
+
+		if ( $ids ) {
+			update_post_meta( $post_id, Course::PREREQUISITES_KEY, $ids );
+		} else {
+			delete_post_meta( $post_id, Course::PREREQUISITES_KEY );
 		}
 	}
 

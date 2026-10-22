@@ -29,6 +29,7 @@ final class Frontend {
 
 		// Course details on single course pages.
 		add_filter( 'wcl_course_listing_meta', array( $this, 'course_meta_html' ), 10, 2 );
+		add_filter( 'wcl_course_listing_meta', array( $this, 'prerequisites_html' ), 15, 2 );
 		add_filter( 'the_content', array( $this, 'append_course_meta' ) );
 
 		// SEO and social media tags.
@@ -97,6 +98,17 @@ final class Frontend {
 	}
 
 	/**
+	 * Add the course's prerequisites to the details shown on single course pages.
+	 *
+	 * @param string $output  Markup so far.
+	 * @param int    $post_id Course ID.
+	 * @return string
+	 */
+	public function prerequisites_html( $output, $post_id ) {
+		return $output . Course::prerequisites_html( $post_id );
+	}
+
+	/**
 	 * Append course details to the content of single course pages.
 	 *
 	 * @param string $content Post content.
@@ -112,7 +124,7 @@ final class Frontend {
 			 * @param string $output  Markup to append. Default empty.
 			 * @param int    $post_id Course ID.
 			 */
-			$content .= apply_filters( 'wcl_course_listing_meta', '', $post->ID ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Established public hook name.
+			$content .= apply_filters( 'wcl_course_listing_meta', '', $post->ID );
 		}
 
 		return $content;

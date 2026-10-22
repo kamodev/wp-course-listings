@@ -107,6 +107,51 @@
 	color: #333;
 }
 
+/* Prerequisites */
+.wcl-course-prerequisites {
+	margin-bottom: 10px;
+	font-size: 0.9em;
+	color: #666;
+}
+.wcl-course-prerequisites a {
+	color: #0073aa;
+	text-decoration: none;
+}
+.wcl-course-prerequisites a:hover {
+	text-decoration: underline;
+}
+
+/* Prices and booking buttons (WooCommerce) */
+.wcl-course-purchase,
+.wcl-program-package {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin-top: 15px;
+}
+.wcl-price {
+	font-weight: 600;
+}
+.wcl-price del {
+	font-weight: normal;
+	opacity: 0.6;
+}
+.wcl-price ins {
+	text-decoration: none;
+}
+.wcl-program-package {
+	margin: 20px 0;
+	padding: 15px 20px;
+	background: #f8f9fa;
+	border-left: 4px solid #8e44ad;
+}
+.wcl-program-package-title {
+	flex-basis: 100%;
+	margin: 0;
+	font-weight: 600;
+}
+
 /* Hide post meta information on course posts */
 .course .entry-meta,
 .course .post-meta,

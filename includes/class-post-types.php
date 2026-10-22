@@ -132,15 +132,14 @@ final class Post_Types {
 			'course_program',
 			array( 'course' ),
 			array(
-				'hierarchical'         => true,
-				'labels'               => $labels,
-				'show_ui'              => true,
-				'show_admin_column'    => true,
-				'rewrite'              => array( 'slug' => Options::get( 'wcl_program_slug' ) ),
-				'show_in_rest'         => true,
-				// Classic editor only; the block editor uses its own taxonomy panel.
-				'meta_box_cb'          => array( Admin::class, 'render_program_meta_box' ),
-				'meta_box_sanitize_cb' => 'taxonomy_meta_box_sanitize_cb_checkboxes',
+				'hierarchical'      => true,
+				'labels'            => $labels,
+				'show_ui'           => true,
+				'show_admin_column' => true,
+				'rewrite'           => array( 'slug' => Options::get( 'wcl_program_slug' ) ),
+				'show_in_rest'      => true,
+				// Programs are assigned with the Program field in Course Details.
+				'meta_box_cb'       => false,
 			)
 		);
 	}

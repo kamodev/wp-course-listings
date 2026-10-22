@@ -1,6 +1,6 @@
 # WP Course Listings
 
-A WordPress plugin for managing courses as a custom post type, grouping them into categories and ordered programs, and listing them anywhere with a shortcode.
+A WordPress plugin for managing courses as a custom post type, grouping them into categories and ordered programs, selling them through WooCommerce, and listing them anywhere with a shortcode.
 
 See [`readme.txt`](readme.txt) for the full feature list, shortcode reference and changelog.
 
@@ -8,6 +8,7 @@ See [`readme.txt`](readme.txt) for the full feature list, shortcode reference an
 
 - WordPress 6.0 or later
 - PHP 7.4 or later
+- Optional: WooCommerce 8.0 or later to sell courses and program packages, and WooCommerce Appointments to sell courses as Appointment products
 
 ## Installation
 
@@ -36,6 +37,36 @@ Add courses under **Courses** in the admin menu, then list them with the shortco
 | `show_categories` | Show category links | Display setting |
 | `show_programs` | Show program links and position | Display setting |
 | `show_meta` | Show duration and level | Display setting |
+| `show_prerequisites` | Show prerequisite links | Display setting |
+| `show_price` | Show price and booking button (WooCommerce) | Display setting |
+| `show_package` | Show the program package offer above a `program` listing (WooCommerce) | `true` |
+
+## WooCommerce
+
+WooCommerce is optional; without it the selling options are hidden.
+
+- **Courses:** tick *Sell this course as a WooCommerce product* in the **Sell This Course** box and set a price. The plugin creates the product and keeps its name, price, image and status in step with the course. With WooCommerce Appointments active the product is an Appointment product (set availability, duration and staff on the product); otherwise it is a virtual simple product.
+- **Program packages:** on a course program, tick *Sell this program as a package* and optionally set a percentage or fixed discount. The package is one virtual product whose regular price is the total of the program's published courses that are sold as products; the discount becomes its sale price. It is recalculated whenever a course's price, status or program changes.
+- Products are never deleted: when a course or package stops being sold, or a course or program is deleted, its product is set to draft.
+- Prerequisites are shown to customers but not enforced at checkout.
+
+| Data | Stored as |
+| --- | --- |
+| Sold, price, linked product | Course meta `_wcl_sell_as_product`, `_wcl_price`, `_wcl_product_id` |
+| Package enabled, discount, linked product | Program term meta `_wcl_package_enabled`, `_wcl_package_discount_type`, `_wcl_package_discount`, `_wcl_package_product_id` |
+| Back-links on products | Product meta `_wcl_course_id`, or `_wcl_program_id` and `_wcl_package_course_ids` |
+| Prerequisites | Course meta `_wcl_prerequisites` (array of course IDs) |
+
+## Hooks
+
+| Hook | Type | Use |
+| --- | --- | --- |
+| `wcl_course_listing_meta` | filter | Markup appended below a single course's content |
+| `wcl_course_purchase_html` | filter | Price and booking button for a course |
+| `wcl_program_package_html` | filter | Package offer for a program |
+| `wcl_course_product_type` | filter | Product type created for courses (`appointment` or `simple`) |
+| `wcl_before_course_product_save` | action | Set extra properties on a course's product before it is saved |
+| `wcl_before_program_package_save` | action | Set extra properties on a package product before it is saved |
 
 ## Project structure
 
@@ -46,11 +77,14 @@ readme.txt                 WordPress readme (description, FAQ, changelog)
 includes/
   class-plugin.php         Wires the components into WordPress
   class-options.php        Option names and defaults
+  class-course.php         Course program and prerequisite helpers
   class-post-types.php     Course post type, taxonomies and rewrite rules
   class-activator.php      Activation and deactivation
+  woocommerce/             Optional WooCommerce integration: course products and program packages
 admin/
   class-admin.php          Meta boxes, saving and the course list table
   class-settings.php       Settings → Course Listings
+  class-woocommerce-admin.php  Sell This Course box and program package fields
   partials/                Admin templates
   css/, js/                Admin assets
 public/
@@ -60,7 +94,7 @@ public/
 languages/                 Translation template (.pot)
 ```
 
-All PHP classes live in the `WP_Course_Listings` namespace. Stored data keeps the `wcl_` prefix: option names, `_wcl_*` post meta keys and the `wcl_course_listing_meta` filter.
+All PHP classes live in the `WP_Course_Listings` namespace. Stored data and hooks keep the `wcl_` prefix: option names, `_wcl_*` meta keys and `wcl_*` hooks.
 
 ## Development
 

@@ -45,6 +45,8 @@ final class Options {
 			'wcl_show_categories'     => true,
 			'wcl_show_course_meta'    => true,
 			'wcl_show_programs'       => true,
+			'wcl_show_prerequisites'  => true,
+			'wcl_show_price'          => true,
 			// Archive settings.
 			'wcl_archive_title'       => 'Courses',
 			'wcl_archive_description' => '',

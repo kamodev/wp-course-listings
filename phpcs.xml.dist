@@ -31,5 +31,7 @@
 				<element value="wp_course_listings"/>
 			</property>
 		</properties>
+		<!-- Hook names keep the plugin's wcl_ prefix, which is shorter than WPCS accepts. -->
+		<exclude name="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound"/>
 	</rule>
 </ruleset>

@@ -3,13 +3,78 @@
  */
 
 /* Course edit screen */
-.wcl-program-select {
-	width: 100%;
-	max-width: 400px;
-}
-
 .wcl-program-order {
 	width: 100px;
+}
+
+.wcl-field {
+	margin: 1em 0;
+}
+
+/* Type-ahead fields */
+.wcl-lookup-selected {
+	margin: 4px 0;
+}
+
+.wcl-lookup-selected:empty {
+	display: none;
+}
+
+.wcl-lookup-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	margin: 0 6px 6px 0;
+	padding: 2px 2px 2px 8px;
+	background: #f0f0f1;
+	border: 1px solid #c3c4c7;
+	border-radius: 2px;
+}
+
+.wcl-lookup-remove.button-link {
+	padding: 0 6px;
+	color: #b32d2e;
+	font-size: 16px;
+	line-height: 1.4;
+	text-decoration: none;
+}
+
+.wcl-lookup-remove.button-link:hover,
+.wcl-lookup-remove.button-link:focus {
+	color: #8a2424;
+}
+
+.wcl-lookup-menu.ui-autocomplete {
+	position: absolute;
+	z-index: 100000;
+	max-height: 240px;
+	margin: 0;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #8c8f94;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.wcl-lookup-menu .ui-menu-item-wrapper {
+	display: block;
+	padding: 6px 10px;
+	cursor: pointer;
+}
+
+.wcl-lookup-menu .ui-state-active {
+	color: #fff;
+	background: #2271b1;
+}
+
+/* Course program screens */
+.form-field input.wcl-discount-amount {
+	width: 8em;
+}
+
+.form-field select.wcl-discount-type {
+	width: auto;
 }
 
 /* Settings page */

@@ -27,6 +27,8 @@ function delete_options() {
 		'wcl_show_categories',
 		'wcl_show_course_meta',
 		'wcl_show_programs',
+		'wcl_show_prerequisites',
+		'wcl_show_price',
 		'wcl_archive_title',
 		'wcl_archive_description',
 		'wcl_enable_seo_meta',

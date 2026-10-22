@@ -44,12 +44,16 @@ final class Shortcode {
 				'show_categories'     => Options::get( 'wcl_show_categories' ),
 				'show_programs'       => Options::get( 'wcl_show_programs' ),
 				'show_meta'           => Options::get( 'wcl_show_course_meta' ),
+				'show_prerequisites'  => Options::get( 'wcl_show_prerequisites' ),
+				'show_price'          => Options::get( 'wcl_show_price' ),
+				'show_package'        => true,
 			),
 			$atts,
 			self::TAG
 		);
 
-		foreach ( array( 'order_by_program', 'show_featured_image', 'show_excerpt', 'show_categories', 'show_programs', 'show_meta' ) as $flag ) {
+		$flags = array( 'order_by_program', 'show_featured_image', 'show_excerpt', 'show_categories', 'show_programs', 'show_meta', 'show_prerequisites', 'show_price', 'show_package' );
+		foreach ( $flags as $flag ) {
 			$atts[ $flag ] = wp_validate_boolean( $atts[ $flag ] );
 		}
 
@@ -61,7 +65,9 @@ final class Shortcode {
 			return '<p>' . esc_html__( 'No courses found.', 'wp-course-listings' ) . '</p>';
 		}
 
-		$output = '<div class="wcl-course-listings">';
+		$output = $atts['show_package'] ? $this->render_package( $atts['program'] ) : '';
+
+		$output .= '<div class="wcl-course-listings">';
 		while ( $query->have_posts() ) {
 			$query->the_post();
 			$output .= $this->render_course( get_the_ID(), $atts );
@@ -71,6 +77,31 @@ final class Shortcode {
 		wp_reset_postdata();
 
 		return $output;
+	}
+
+	/**
+	 * Render the package offer for the program being listed, if it has one.
+	 *
+	 * @param string $program_slug Program slug from the shortcode, or empty.
+	 * @return string
+	 */
+	private function render_package( $program_slug ) {
+		if ( '' === $program_slug ) {
+			return '';
+		}
+
+		$program = get_term_by( 'slug', sanitize_text_field( $program_slug ), 'course_program' );
+		if ( ! $program ) {
+			return '';
+		}
+
+		/**
+		 * Filters the package offer shown above a program's course listing.
+		 *
+		 * @param string $html       Markup. Default empty.
+		 * @param int    $program_id Program term ID.
+		 */
+		return apply_filters( 'wcl_program_package_html', '', $program->term_id );
 	}
 
 	/**
@@ -146,6 +177,10 @@ final class Shortcode {
 			$output .= $this->render_meta( $post_id );
 		}
 
+		if ( $atts['show_prerequisites'] ) {
+			$output .= Course::prerequisites_html( $post_id );
+		}
+
 		if ( $atts['show_categories'] ) {
 			$categories = get_the_terms( $post_id, 'course_category' );
 			if ( $categories && ! is_wp_error( $categories ) ) {
@@ -168,6 +203,16 @@ final class Shortcode {
 				}
 				$output .= '</div>';
 			}
+		}
+
+		if ( $atts['show_price'] ) {
+			/**
+			 * Filters the price and booking button shown for a course.
+			 *
+			 * @param string $html      Markup. Default empty.
+			 * @param int    $course_id Course ID.
+			 */
+			$output .= apply_filters( 'wcl_course_purchase_html', '', $post_id );
 		}
 
 		$output .= '</div>';

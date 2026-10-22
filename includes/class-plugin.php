@@ -44,10 +44,15 @@ final class Plugin {
 		( new Post_Types() )->init();
 		( new Shortcode() )->init();
 		( new Frontend() )->init();
+		( new WooCommerce_Integration() )->init();
 
 		if ( is_admin() ) {
 			( new Admin() )->init();
 			( new Settings() )->init();
+
+			if ( WooCommerce_Integration::is_available() ) {
+				( new WooCommerce_Admin() )->init();
+			}
 		}
 	}
 

@@ -150,6 +150,16 @@ final class Settings {
 						'type'        => 'checkbox',
 						'description' => __( 'Show course programs and program order in listings', 'wp-course-listings' ),
 					),
+					'wcl_show_prerequisites'  => array(
+						'label'       => __( 'Show Prerequisites', 'wp-course-listings' ),
+						'type'        => 'checkbox',
+						'description' => __( 'Show course prerequisites in listings', 'wp-course-listings' ),
+					),
+					'wcl_show_price'          => array(
+						'label'       => __( 'Show Prices', 'wp-course-listings' ),
+						'type'        => 'checkbox',
+						'description' => __( 'Show prices and booking buttons for courses sold through WooCommerce in listings', 'wp-course-listings' ),
+					),
 				),
 			),
 			'wcl_archive_settings_section' => array(
