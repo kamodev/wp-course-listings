@@ -94,6 +94,8 @@ CI runs the coding standards check, a PHP syntax check on PHP 7.4 to 8.5, and th
 
 The [release workflow](.github/workflows/release.yml) checks that the tag matches the plugin version, builds `wp-course-listings.zip` and publishes a GitHub release with the zip attached.
 
+To release without pushing a tag, run the **Release** workflow from the Actions tab and enter the branch, tag or commit to release. The workflow creates the `v<version>` tag on that commit.
+
 ## License
 
 GPL-2.0-or-later
